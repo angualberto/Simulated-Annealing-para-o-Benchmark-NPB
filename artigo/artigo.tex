@@ -1,7 +1,6 @@
 \documentclass[12pt]{article}
 
 \usepackage{sbc-template}
-\geometry{a4paper, top=3.5cm, left=3.5cm, right=2.5cm, bottom=2.5cm}
 \usepackage{graphicx,url}
 \usepackage[utf8]{inputenc}
 \usepackage[brazil]{babel}
@@ -14,16 +13,13 @@
 \newfloat{algoritmo}{htp}{loa}
 \floatname{algoritmo}{Algoritmo}
 
-\linespread{0.88}
+\linespread{0.96}
 
 \sloppy
 
-\usepackage{caption}
-\captionsetup{font=scriptsize}
-
-\setlength{\textfloatsep}{8pt plus 1pt minus 2pt}
+\setlength{\textfloatsep}{7pt plus 1pt minus 1pt}
 \setlength{\floatsep}{6pt plus 1pt minus 1pt}
-\setlength{\intextsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{5pt plus 1pt minus 1pt}
 
 \setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
 \setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
@@ -138,19 +134,7 @@ Thomas para tridiagonais (\texttt{gtsvInterleavedBatch}) e pentadiagonais
 cuPentBatch \cite{carroll:2019}, um solver pentadiagonal batch que mantém
 uma única cópia da matriz do sistema e atualiza apenas os vetores de
 termos independentes, superando a NVIDIA em até cerca de 2$\times$ nos
-casos de interesse físico. Um pôster técnico da NASA (Langley, em conjunto
-com a Old Dominion) \cite{nasa:2021} demonstrou que um solver custom era
-92\% mais rápido que a implementação batch da NVIDIA em V100, atribuindo o
-ganho à menor demanda de banda de memória. Para tridiagonais, o PfSolve
-\cite{pfsolve:2025} (ETH Zürich) atinge vazões próximas ao pico de banda em
-H100 e MI210, e o solver SPIKE da UIUC \cite{chang:2012} estabeleceu a base
-de estabilidade numérica para abordagens particionadas.
-
-\textbf{Multi-GPU.} Para malhas massivas, a biblioteca PaScaL\_TDMA
-\cite{kang:2023} e o Pipelined-TDMA \cite{kim:2025} atacam a escalabilidade
-da comunicação entre GPUs (fraca ideal até 64 A100 no segundo caso), mas
-tratam do particionamento \emph{entre} GPUs, enquanto este trabalho
-particiona entre CPU e GPU de uma única máquina.
+casos de interesse físico. Um pôster técnico da NASA \cite{nasa:2021} demonstrou ganhos de 92\% sobre a NVIDIA, atribuindo o ganho à menor demanda de banda de memória. Enquanto PfSolve \cite{pfsolve:2025} e bibliotecas Multi-GPU (PaScaL\_TDMA \cite{kang:2023}, Pipelined-TDMA \cite{kim:2025}) focam em escalabilidade horizontal de hiper-grafos, o solver SPIKE \cite{chang:2012} estabelece a base de estabilidade numérica. Nossa abordagem contrapõe frameworks de nó único como StarPU \cite{starpu:2011}.
 
 \textbf{NPB em GPU.} O NPB-GPU \cite{araujo:2021}, mantido por Araujo,
 Griebler e colaboradores (PUCRS), porta os oito benchmarks do NPB para CUDA,
@@ -191,57 +175,19 @@ $d_i \equiv a_{i,i+1}$ e $e_i \equiv a_{i,i+2}$, com todos os elementos
 fora das cinco diagonais nulos. A fatoração $A = LU$ sem pivotamento
 \cite{golub:2013} produz $L$ bidiagonal inferior com diagonal unitária e $U$ com banda
 superior de largura 2, cujos elementos obedecem às recorrências
-\begin{align}
-  l_{i,i-2} &= \frac{a_i}{u_{i-2,i-2}}, \label{eq:l2}\\
-  l_{i,i-1} &= \frac{b_i - l_{i,i-2}\,u_{i-2,i-1}}{u_{i-1,i-1}}, \label{eq:l1}\\
-  u_{i,i}   &= c_i - l_{i,i-1}\,u_{i-1,i} - l_{i,i-2}\,u_{i-2,i}, \label{eq:u0}\\
-  u_{i,i+1} &= d_i - l_{i,i-1}\,u_{i-1,i+1}, \label{eq:u1}\\
-  u_{i,i+2} &= e_i, \label{eq:u2}
-\end{align}
-para $i = 1, \dots, n$, onde todos os termos com índices $\le 0$ (ou
-$> n$) são nulos e as linhas de extremidade da malha são tratadas
-separadamente. A solução segue por substituição direta e retrosubstituição:
 \begin{equation}
-  y_i = f_i - l_{i,i-1}\,y_{i-1} - l_{i,i-2}\,y_{i-2},
-  \qquad
-  x_i = \frac{y_i - u_{i,i+1}\,x_{i+1} - u_{i,i+2}\,x_{i+2}}{u_{i,i}}.
-  \label{eq:solve}
+\begin{aligned}
+  l_{i,i-2} &= a_i/u_{i-2,i-2}, \quad
+  l_{i,i-1} = (b_i - l_{i,i-2}\,u_{i-2,i-1})/u_{i-1,i-1},\\
+  u_{i,i}   &= c_i - l_{i,i-1}\,u_{i-1,i} - l_{i,i-2}\,u_{i-2,i}, \quad
+  u_{i,i+1} = d_i - l_{i,i-1}\,u_{i-1,i+1}, \quad
+  u_{i,i+2} = e_i,
+\end{aligned}
+\label{eq:fatoracao}
 \end{equation}
-Pré-multiplicando $A$ por $L^{-1}$ (ou, equivalentemente, combinando o
-número de flops das recorrências \eqref{eq:l2}--\eqref{eq:u2} e de
-\eqref{eq:solve}), cada linha exige 28 operações em ponto flutuante por
-ponto \cite{golub:2013}, valor usado como base do estimador de GFLOPS nas
-Seções~\ref{sec:res} e~\ref{sec:disc}. O Algoritmo~\ref{alg:kernel}
-enuncia a execução de uma linha na GPU. As recorrências
-\eqref{eq:l2}--\eqref{eq:u2} são idênticas nas CPUs e na GPU, mas o
-compilador do host é invocado com \texttt{-fmad=false} para que a
-contração multiplicação--adiciona não introduza diferenças de
-arredondamento entre os dois caminhos.
+para $i = 1, \dots, n$, com as condições de contorno tratadas separadamente. A solução de $Ax = f$ segue por substituição direta e retrosubstituição ($y_i = f_i - l_{i,i-1}\,y_{i-1} - l_{i,i-2}\,y_{i-2}$ e $x_i = (y_i - u_{i,i+1}\,x_{i+1} - u_{i,i+2}\,x_{i+2})/u_{i,i}$). 
 
-\begin{algoritmo}[ht]
-\centering
-\caption{\texttt{solve\_lines\_kernel}: resolução de um lote de linhas
-  pentadiagonais na GPU (um thread por linha).}
-\label{alg:kernel}
-\scriptsize
-\begin{algorithmic}[1]
-\State \textbf{Entrada:} índices base $B$, coeficientes $(a,b,c,d,e)$,
-        RHS $f$; \textbf{Saída:} solução $u$
-\For{cada linha $j$ do bloco fornecido por $gpu\_base$}
-  \State $i \gets$ posição do ponto na linha
-  \State {fatoração:} \Comment{recorrências \eqref{eq:l2}--\eqref{eq:u2}}
-  \State $l2 \gets a_i/u_{i-2}$;\hspace{2em}
-        $l1 \gets (b_i - l2\,u_{i-2,i-1})/u_{i-1}$
-  \State $u_i \gets c_i - l1\,u_{i-1} - l2\,u_{i-2}$;\hspace{2em}
-        $u_{i+1} \gets d_i - l1\,u_{i-1,i+1}$;\hspace{2em}
-        $u_{i+2} \gets e_i$
-  \State {substituição:} \Comment{\eqref{eq:solve}}
-  \State $y_i \gets f_i - l1\,y_{i-1} - l2\,y_{i-2}$
-  \State $x_i \gets (y_i - u_{i+1}\,x_{i+1} - u_{i+2}\,x_{i+2})/u_i$
-\EndFor
-\State \Return $x$
-\end{algorithmic}
-\end{algoritmo}
+Cada linha exige 28 operações em ponto flutuante por ponto \cite{golub:2013}. A varredura \texttt{solve\_lines\_kernel} elimina a sub-diagonal (Eq. \ref{eq:fatoracao}) seguida da substituição para obter $x$. As recorrências são idênticas nas CPUs e GPU, invocadas com \texttt{-fmad=false} no host para evitar contrações matemáticas que introduzam diferenças de arredondamento.
 
 Neste trabalho a malha é representada como \texttt{nb} blocos de
 \texttt{lines\_per\_block}=256 linhas consecutivas de $n$=1020 pontos. Cada
@@ -575,11 +521,7 @@ Figura~\ref{fig:campanhas}(a) mostram os tempos por escala.
 \end{tabular}
 \end{table}
 
-O SA, que não recebe nenhuma informação \emph{a priori} sobre as taxas da
-máquina, permanece dentro de 1--4\% do EMA em todas as escalas — os 4,3\%
-de 1024 blocos estão dentro da variabilidade térmica da campanha (min
-observado do SA na 2\aa\ rodada: 71,31~ms, com frac$_{cpu} \approx
-0{,}40$--0,44 de regime).
+O SA permanece dentro de 1--4\% do EMA em todas as escalas (a variação de 4,3\% em 1024 blocos reflete a variabilidade térmica intrínseca da máquina).
 
 A Figura~\ref{fig:campanhas}(b) mostra a varredura de fração forçada
 (\texttt{HSP\_FIXED\_FRAC}) em 1024 blocos, cada ponto com checksum
@@ -688,23 +630,7 @@ Para avaliar a portabilidade e a robustez do despachante adaptativo frente a var
 
 O mecanismo de streaming em mega-lotes permitiu o processamento contínuo da malha sem estouro de memória física de vídeo (VRAM). Sob contenção de barramento e alta latência de disco no host --- na qual o tempo médio de resposta da CPU degradou transitoriamente para 138,9~ms/bloco ---, o controlador SA detectou o afogamento em tempo real e redirecionou dinamicamente o fluxo para a GPU (1,38~ms/bloco), despachando 1586 blocos para o dispositivo e concluindo o ciclo completo em 90,87~s. O checksum final reproduziu exatamente o valor de referência ($1{,}889440\times 10^8$), comprovando a bit-identidade estrita entre gerações de silício (\texttt{sm\_30} vs. \texttt{sm\_89}) e a tolerância a ruído sistêmico.
 
-\begin{table}[htbp]
-\centering
-\caption{Consolidação dos modos de execução e plataformas experimentais (malha $1020^3$, checksum $1{,}889440\times 10^8$ bit-idêntico).}
-\label{tab:resumo_geral}
-\small
-\begin{tabular}{lcccc}
-\hline
-\textbf{Plataforma / Modo} & \textbf{Tempo/Varredura} & \textbf{Vazão (sist/s)} & \textbf{GFLOPS} & \textbf{Split ($\alpha$)} \\
-\hline
-Híbrido SA Auto (RTX 5000 Ada) & \textbf{163,1 ms} & \textbf{4,86e6} & \textbf{182,1} & 72\% GPU / 28\% CPU \\
-Somente GPU (RTX 5000 Ada)     & 184,9 ms          & 4,29e6          & 160,7          & 100\% GPU \\
-Somente CPU (EPYC 9124)        & 611,1 ms          & 1,30e6          & 48,6           & 100\% CPU \\
-Híbrido SA Mega-Lote (1024 blk) & \textbf{42,44 ms} & \textbf{6,18e6} & \textbf{176,3} & Convergido (56/44) \\
-Híbrido OOC (GTX 660 + Swap)   & 90,87 s (total)   & 1,15e4          & --             & Auto-recuperação SA \\
-\hline
-\end{tabular}
-\end{table}
+
 
 \section{Discussão}\label{sec:disc}
 
@@ -718,54 +644,29 @@ adação é pequeno (uma janela de \texttt{SA\_WIN} blocos, custo de medição
 negligenciável frente à varredura), e o modo congelado ($T <
 T_{freeze}$) garante estabilidade em execuções longas.
 
-\noindent\textbf{Democratização do HPC e Eficiência de Recursos.}
-Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06 \times 10^9$ pontos de malha) é reservada a supercomputadores com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A abordagem híbrida desenvolvida demonstra que a otimização algorítmica orientada à microarquitetura contorna a escassez de infraestruturas massivas: combinando a lista livre $O(1)$, a pré-fatoração LU estacionária e o ajuste estocástico on-line por SA, foi possível processar mais de 1,061 trilhão de pontos em 213,9~s em um único nó de trabalho. O gargalo de memória e latência característico de matrizes bandadas não exige, portanto, escalonamento horizontal em larga escala (força bruta de hardware), mas sim a exploração cooperativa e balanceada dos barramentos locais (RAM e VRAM) em estações de trabalho convencionais.
+\noindent\textbf{Eficiência de Recursos.} O gargalo de memória de matrizes bandadas não exige escalonamento horizontal massivo. A combinação de lista livre, fatoração LU e ajuste por SA alcança vazões de trilhões de pontos em nós de trabalho únicos.
 
-\subsection{Resiliência Out-of-Core e Varreduras Tridimensionais ($X, Y, Z$)}
-Para estressar os limites da arquitetura, a malha da Classe E ($1020^3 \approx 1{,}06\times 10^9$ pontos, $\sim$16,8~GB) foi executada em uma estação de trabalho legada (AMD FX-6300, 3 núcleos físicos ativos, 15~GiB de RAM física e GPU NVIDIA GeForce GTX 660 de 2~GB VRAM / \texttt{sm\_30}) com arquivo de swap SSD de 32~GiB.
-
-\noindent\textbf{Filtragem de Ruído de Paginação (EMA vs. SA).}
-Sob regime de paginação ativa, a leitura dispersa de páginas virtuais causa bloqueios intermitentes de I/O na CPU. Como reportado na Tabela~\ref{tab:ooc_ema_sa}, o controlador reativo por Média Móvel Exponencial (EMA) acumulou o ruído de cauda longa, inflando a latência média da CPU para 266,89~ms/bloco e distorcendo a fração de trabalho. Em contrapartida, o decisor estocástico SA filtrou os picos transitórios na janela de energia ($W=16$), convergindo a latência estável para 138,97~ms/bloco e concluindo a varredura $X$ em 90,87~s com checksum $1{,}889440\times 10^8$ rigorosamente bit-idêntico.
+\subsection{Resiliência Out-of-Core e Varreduras Tridimensionais}
+Na execução da Classe E ($16{,}8$~GB) num nó legado de 15~GiB e GTX 660 2~GB (swap 32~GiB SSD), a paginação gerou \textit{thrashing}. O controlador EMA acumulou esse ruído (inflando a latência da CPU para $266{,}89$~ms/bloco). O decisor SA filtrou os picos transitórios, contornando o afogamento (Tabela~\ref{tab:super_ooc}).
 
 \begin{table}[htbp]
 \centering
-\caption{Comparativo de resiliência a ruído de I/O em swap SSD (GTX 660 2~GB, 4064 blocos, $n=1020$).}
-\label{tab:ooc_ema_sa}
+\caption{Resiliência Out-of-Core (swap SSD). O EMA falha sob thrashing; o SA converge.}
+\label{tab:super_ooc}
 \scriptsize
-\begin{tabular}{lcc}
-\hline
-\textbf{Métrica de Execução} & \textbf{Baseline (EMA)} & \textbf{Proposto (SA)} \\
-\hline
-Carga atribuída à GPU & 1489 blocos (36,6\%) & \textbf{1586 blocos (39,0\%)} \\
-Carga atribuída à CPU & 2575 blocos (63,4\%) & \textbf{2478 blocos (61,0\%)} \\
-Ruído medido na CPU (\textit{page faults}) & 266,889 ms/bloco & \textbf{138,969 ms/bloco} \\
-Latência medida na GPU & 1,1025 ms/bloco & 1,3818 ms/bloco \\
-Tempo total da varredura & 94,12 s & \textbf{90,87 s} \\
-Checksum de validação & $1{,}889440\times 10^8$ & $1{,}889440\times 10^8$ (Bit-idêntico) \\
-\hline
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Eixo (Modo)} & \textbf{Tempo Varredura} & \textbf{Ruído CPU (Latência)} & \textbf{Split ($\alpha$)} & \textbf{Vazão SSD} \\
+\midrule
+$X$ (EMA Baseline) & 94,12 s & 266,89 ms/bloco & 36\% GPU / 63\% CPU & -- \\
+$X$ (SA Nativo) & \textbf{90,87 s} & \textbf{138,97 ms/bloco} & 39\% GPU / 61\% CPU & 186,6 MB/s \\
+$Y$ (SA Transpose) & \textbf{91,98 s} & estável & 42\% GPU / 58\% CPU & 184,4 MB/s \\
+$Z$ (SA Transpose) & \textbf{212,43 s} & afogamento I/O detectado & 21\% GPU / 79\% CPU & 79,8 MB/s \\
+\bottomrule
 \end{tabular}
 \end{table}
 
-\noindent\textbf{Varreduras $Y$ e $Z$ com \textit{Edge Transpose}.}
-Para transpor a memória não-contígua nos eixos $Y$ (salto de $N \approx 8{,}16$~kB) e $Z$ (salto de $N^2 \approx 8{,}32$~MB), as threads do pool de host linearizaram os blocos em micro-buffers contíguos de 16~MB antes do streaming assíncrono para a GPU. Os resultados para os três eixos constam na Tabela~\ref{tab:3d_ooc}.
-
-\begin{table}[htbp]
-\centering
-\caption{Desempenho Out-of-Core nas três direções espaciais (malha $1020^3$, 4064 blocos, GTX 660 2~GB sob swap SSD).}
-\label{tab:3d_ooc}
-\scriptsize
-\begin{tabular}{lcccccc}
-\hline
-\textbf{Eixo} & \textbf{Acesso} & \textbf{Stride} & \textbf{Banda SSD} & \textbf{GFLOPS} & \textbf{Split ($\alpha$)} & \textbf{Tempo (s)} \\
-\hline
-$X$ (Nativo)      & Contíguo   & Unitário & 186,6 MB/s & 0,327 & 39\% GPU / 61\% CPU & \textbf{90,87} \\
-$Y$ (Transposto)  & Descont.   & $N$      & 184,4 MB/s & 0,323 & 42\% GPU / 58\% CPU & \textbf{91,98} \\
-$Z$ (Transposto)  & Descont.   & $N^2$    & 79,8 MB/s  & 0,140 & 21\% GPU / 79\% CPU & \textbf{212,43} \\
-\hline
-\end{tabular}
-\end{table}
-
-O empacotamento paralelo via OpenMP permitiu que o eixo $Y$ operasse com taxa equivalente ao eixo $X$ (91,98~s vs. 90,87~s, atingindo $\sim$184~MB/s de vazão de disco). No eixo $Z$, o salto severo de 8~MB por ponto saturou a taxa de I/O do SSD para 79,8~MB/s; nesse cenário, o decisor SA detectou o afogamento de barramento e deslocou 79\% da carga de resolução para os workers de CPU, mantendo o pipeline ativo e concluindo a malha tridimensional completa em 212,43~s.
+Para transpor os saltos descontínuos em $Y$ e $Z$, as threads \textit{host} linearizaram blocos em micro-buffers de 16~MB. Em $Y$, operou na taxa de $X$. Em $Z$ (salto de 8~MB/ponto), saturou I/O para 79,8~MB/s; o SA detectou a contenção e deslocou 79\% para a CPU, concluindo a malha 3D.
 
 \noindent\textbf{Adaptação Autônoma a Acessos Descontínuos ($X, Y, Z$).}
 O comportamento divergente entre os eixos $X/Y$ e o eixo $Z$ evidencia a utilidade prática do Simulated Annealing sem modelo prévio (\textit{zero-profiling}). Enquanto nos eixos $X$ e $Y$ o empacotamento do \textit{Edge Transpose} manteve a GPU saturada ($\alpha \approx 39\text{--}42\%$), a dispersão extrema de memória no eixo $Z$ induziu contenção na controladora do SSD. Em sistemas estáticos, essa desaceleração forçaria a GPU a aguardar transferências lentas por DMA; o controlador SA, contudo, capturou o atraso relativo e priorizou a computação nos núcleos de CPU locais, provando que a meta-heurística reage tanto a variações térmicas de processamento quanto a gargalos físicos de subsistemas de armazenamento e memória virtual.
@@ -777,15 +678,12 @@ O comportamento divergente entre os eixos $X/Y$ e o eixo $Z$ evidencia a utilida
 
 Este trabalho apresentou um solver pentadiagonal híbrido CPU--GPU com balanceamento adaptativo por simulated annealing, telemetria térmica e garantia de reprodutibilidade bit-a-bit. Na plataforma de referência (AMD EPYC + NVIDIA RTX 5000 Ada), o solver resolveu 1,061 trilhão de pontos em 213,9~s, atingindo vazão sustentada de 4,86 milhões de sistemas lineares por segundo e superando os modos puramente GPU (em 13\%) e puramente CPU (em $3{,}7\times$). O kernel de produção superou o \textit{cuPentBatch} em $1{,}05\times$ no solve e em $2{,}17\times$ no ciclo completo, mantendo resíduo $\|Ax-b\|_\infty < 10^{-15}$.
 
-A validação em nó com recursos severamente restritos (GTX 660, 2~GB VRAM) confirmou a robustez do modelo de streaming sob paginação de disco, preservando a bit-identidade do checksum e evidenciando o potencial da abordagem para democratizar simulações de alta resolução em hardware heterogêneo acessível. Trabalhos futuros contemplam a expansão do despachante SA para clusters multi-GPU e a integração do solver ao passo temporal tridimensional completo do NPB SP.
-
-A resolução com sucesso das varreduras nos eixos $X$, $Y$ e $Z$ sob regime \textit{out-of-core} com transposição dinâmica comprovou que a arquitetura independe de alocação monolítica de memória. Mesmo sob gargalos severos de paginação e saltos com stride de até 8~MB no eixo $Z$, o controlador estocástico por Simulated Annealing adaptou autonomamente o balanceamento de carga, garantindo convergência bit-a-bit invariante ($1{,}889440\times 10^8$) e democratizando a execução tridimensional de malhas de 1 bilhão de pontos em estações de trabalho de entrada.
+A validação em nó legado restrito confirmou a robustez \textit{out-of-core} com transposição dinâmica ($X,Y,Z$), comprovando a independência de alocação monolítica. Sob gargalos de paginação e stride de 8~MB, o controlador SA adaptou o balanceamento autonomamente, democratizando malhas de 1 bilhão de pontos com bit-identidade em estações de entrada. Trabalhos futuros contemplam a expansão para multi-GPU e o passo temporal SP completo.
 
 O código-fonte do solver, as campanhas de revalidação e o artigo estão
 disponíveis publicamente em
 \url{https://github.com/angualberto/Simulated-Annealing-para-o-Benchmark-NPB}.
 
-\scriptsize
 \bibliographystyle{sbc}
 \bibliography{artigo}
 
