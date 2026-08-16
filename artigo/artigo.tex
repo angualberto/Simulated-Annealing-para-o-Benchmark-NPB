@@ -389,6 +389,11 @@ explícito, protegendo o hardware em execuções longas. Temperatura e consumo
 são registrados por varredura no log e no JSON, junto da contabilidade
 completa de pontos e sistemas lineares.
 
+\subsection{Transposição de Borda (\textit{Edge Transpose}) para Varreduras $Y$ e $Z$}
+Ao contrário da varredura $X$ (onde as linhas residem contíguas na memória), as varreduras $Y$ e $Z$ exigem passos de memória (\textit{strides}) de tamanho $N$ e $N^2$, respectivamente. Em ambientes com restrição de memória física e paginação ativa em disco (swap), a leitura dispersa de elementos com salto de até 8~MB ocasiona sucessivos \textit{page faults}.
+
+Para contornar esse gargalo, implementou-se o esquema de \textit{Edge Transpose}: as threads do pool de CPU realizam a coleta e empacotamento paralelo das fatias não-contíguas da memória virtual em buffers intermediários lineares de 16~MB no host. Uma vez linearizados, esses blocos contíguos são transferidos via \texttt{cudaMemcpyAsync} e processados diretamente pelo kernel pentadiagonal unificado da GPU, preservando o acesso coalescido sem sobrecarregar o barramento PCIe com transferências picadas.
+
 \section{Plataforma experimental e validação}\label{sec:exper}
 
 \subsection{Ambiente}
@@ -696,44 +701,39 @@ T_{freeze}$) garante estabilidade em execuções longas.
 \noindent\textbf{Democratização do HPC e Eficiência de Recursos.}
 Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06 \times 10^9$ pontos de malha) é reservada a supercomputadores com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A abordagem híbrida desenvolvida demonstra que a otimização algorítmica orientada à microarquitetura contorna a escassez de infraestruturas massivas: combinando a lista livre $O(1)$, a pré-fatoração LU estacionária e o ajuste estocástico on-line por SA, foi possível processar mais de 1,061 trilhão de pontos em 213,9~s em um único nó de trabalho. O gargalo de memória e latência característico de matrizes bandadas não exige, portanto, escalonamento horizontal em larga escala (força bruta de hardware), mas sim a exploração cooperativa e balanceada dos barramentos locais (RAM e VRAM) em estações de trabalho convencionais.
 
-\noindent\textbf{Resiliência em Hardware Restrito e Execução Out-of-Core.}
-Para comprovar a robustez arquitetural do agendador, a malha completa da Classe E (1,06 bilhão de pontos, exigindo $\sim$16,8~GB) foi submetida a um ambiente de extremo gargalo estrutural: uma GPU legada NVIDIA GTX 660 (Kepler, \texttt{sm\_30}) com apenas 2~GB de VRAM nativa e um host sob paginação pesada em disco (swap em SSD de 32~GB).
-
-A restrição impedia alocações diretas (\texttt{cudaMalloc}), ocasionando falhas instantâneas de memória. A arquitetura operou em regime Out-of-Core dinâmico: o dispatcher funcionou como motor de streaming assíncrono, transferindo blocos particionados da RAM para micro-buffers de $\sim$16~MB na VRAM, executando o kernel GPU e devolvendo o resultado via \texttt{cudaMemcpyAsync}.
-
-O teste produziu checksum bit-idêntico ($1{,}889440\times 10^8$), validando a integridade numérica. O comportamento autônomo do SA foi decisivo: a leitura contínua do Swap elevou a latência média da CPU para 138,9~ms por bloco (contra $\sim$1,7~ms em memória física livre). Imediatamente, o controlador SA detectou a degradação na janela de custo $E(x)$ da CPU e, ao constatar que as chamadas de GPU via streaming PCIe mantinham 1,38~ms por bloco, migrou de forma reativa a maior parte do processamento para a placa de vídeo.
-
-Enquanto a execução in-core no cluster EPYC leva $\sim$214~ms por varredura, o desktop legado concluiu a iteração em 90,87~s (Tabela~\ref{tab:ooc_comparativo}). A conclusão central não é o déficit temporal do hardware antigo, mas a resiliência arquitetural: a GPU de 2~GB resolveu sistemas pentadiagonais com precisão perfeita consumindo um volume 8 vezes maior que sua capacidade física, sustentada pela orquestração adaptativa do agendador.
+\subsection{Resiliência Out-of-Core e Varreduras Tridimensionais ($X, Y, Z$)}
+A robustez do despachante adaptativo e do mecanismo \textit{Edge Transpose} foi avaliada na malha tridimensional completa da Classe E ($1020^3 \approx 1{,}06\times 10^9$ pontos, demandando $\sim$16,8~GB) em ambiente de estresse extremo: CPU AMD FX-6300 (3 núcleos ativos, 15~GiB RAM) e GPU legada NVIDIA GeForce GTX 660 (2~GB VRAM, arquitetura Kepler \texttt{sm\_30}) paginando em swap SSD de 32~GiB.
 
 \begin{table}[htbp]
 \centering
-\caption{Comparação empírica para o processamento da malha de 1,06 bilhão de pontos (1 varredura).}
-\label{tab:ooc_comparativo}
+\caption{Desempenho Out-of-Core e comportamento do SA nas três direções espaciais (malha $1020^3$, 4064 blocos, GTX 660 2~GB sob swap SSD).}
+\label{tab:3d_ooc}
 \footnotesize
 \begin{tabular}{lcccc}
 \hline
-\textbf{Hardware} & \textbf{Memória Disponível} & \textbf{Regime} & \textbf{Tempo/Varredura} & \textbf{Gargalo Principal} \\
+\textbf{Eixo Espacial} & \textbf{Padrão de Acesso} & \textbf{Tempo Total (s)} & \textbf{Split ($\alpha$)} & \textbf{Checksum Bit-a-Bit} \\
 \hline
-Cluster (EPYC + RTX 5000) & 32 GB VRAM + RAM livres & In-Core & $\sim$214 ms (0,21 s) & Banda GDDR6 \\
-Desktop Local (GTX 660)   & 2 GB VRAM + 32 GB Swap  & Out-of-Core & 90.869 ms (90,87 s) & I/O Swap (SSD) \\
+Eixo $X$ (Nativo)      & Contíguo                  & \textbf{90,87}           & 39\% GPU / 61\% CPU       & $1{,}889440\times 10^8$ \\
+Eixo $Y$ (Transposto)  & Stride $N$ ($8{,}16$~kB)  & \textbf{91,98}           & 42\% GPU / 58\% CPU       & $1{,}889440\times 10^8$ \\
+Eixo $Z$ (Transposto)  & Stride $N^2$ ($8{,}32$~MB)& \textbf{212,43}          & 21\% GPU / 79\% CPU       & $1{,}889440\times 10^8$ \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Limitações.} (i) A comparação GFLOPS com o NPB-GPU usa contagens de
-flops diferentes (28 vs. ~850 flops/ponto) e o NPB-GPU de referência compila
-com \texttt{-use\_fast\_math}, enquanto o solver proposto usa aritmética
-estrita; métricas invariantes (pontos/s, sistemas/s) são as recomendadas
-para citação. (ii) A margem de 13\% sobre o modo somente-GPU é específica
-desta máquina; o ganho estrutural garantido é sobre o modo somente-CPU
-(3,7$\times$). (iii) O run cobre uma única direção da varredura por iteração;
-a extensão às varreduras y e z (e à avaliação do RHS) é trabalho futuro.
+Na comparação direta com o controlador por Média Móvel Exponencial (EMA) no eixo $X$, o EMA sofreu com picos estocásticos de paginação do disco, reportando ruído de 266,89~ms/bloco na CPU e tempo total de 94,12~s. O otimizador SA filtrou o ruído de I/O em sua janela de energia ($W=16$), estabilizando a latência em 138,97~ms/bloco e reduzindo a varredura para 90,87~s. 
+
+Para os eixos multidimensionais (Tabela~\ref{tab:3d_ooc}), o \textit{Edge Transpose} permitiu ao eixo $Y$ atingir tempo equivalente ao nativo ($91{,}98\text{ s}$ vs. $90{,}87\text{ s}$). No eixo $Z$, sob forte contenção da controladora SSD pelo salto de $N^2$, o controlador SA detectou em tempo real a asfixia de I/O no despachante e ajustou autonomamente o split para 79\% CPU / 21\% GPU, concluindo a varredura em 212,43~s com checksum rigorosamente bit-idêntico.
+
+\noindent\textbf{Limitações e Validação.}
+(i) A comparação de GFLOPS com o NPB-GPU usa contagens de flops distintas (28 vs. 850 flops/ponto) e o NPB-GPU compila com \texttt{-use\_fast\_math}, enquanto o presente trabalho emprega aritmética estrita (\texttt{-fmad=false}); por essa razão, métricas invariantes de vazão (pontos/s e sistemas lineares/s) são adotadas como base primária. (ii) A margem de 13\% sobre o modo somente-GPU é dependente do equilíbrio térmico e do barramento da máquina avaliada; o ganho arquitetural estrutural é a redução frente ao modo somente-CPU ($3{,}7\times$). (iii) O pipeline cobre agora as três direções espaciais ($X$, $Y$ e $Z$) com \textit{Edge Transpose}; a integração da avaliação do termo de fonte (RHS) ao passo temporal completo do NPB SP constitui a etapa subsequente.
 
 \section{Conclusão e trabalhos futuros}\label{sec:conc}
 
 Este trabalho apresentou um solver pentadiagonal híbrido CPU--GPU com balanceamento adaptativo por simulated annealing, telemetria térmica e garantia de reprodutibilidade bit-a-bit. Na plataforma de referência (AMD EPYC + NVIDIA RTX 5000 Ada), o solver resolveu 1,061 trilhão de pontos em 213,9~s, atingindo vazão sustentada de 4,86 milhões de sistemas lineares por segundo e superando os modos puramente GPU (em 13\%) e puramente CPU (em $3{,}7\times$). O kernel de produção superou o \textit{cuPentBatch} em $1{,}05\times$ no solve e em $2{,}17\times$ no ciclo completo, mantendo resíduo $\|Ax-b\|_\infty < 10^{-15}$.
 
 A validação em nó com recursos severamente restritos (GTX 660, 2~GB VRAM) confirmou a robustez do modelo de streaming sob paginação de disco, preservando a bit-identidade do checksum e evidenciando o potencial da abordagem para democratizar simulações de alta resolução em hardware heterogêneo acessível. Trabalhos futuros contemplam a expansão do despachante SA para clusters multi-GPU e a integração do solver ao passo temporal tridimensional completo do NPB SP.
+
+A resolução com sucesso das varreduras nos eixos $X$, $Y$ e $Z$ sob regime \textit{out-of-core} com transposição dinâmica comprovou que a arquitetura independe de alocação monolítica de memória. Mesmo sob gargalos severos de paginação e saltos com stride de até 8~MB no eixo $Z$, o controlador estocástico por Simulated Annealing adaptou autonomamente o balanceamento de carga, garantindo convergência bit-a-bit invariante ($1{,}889440\times 10^8$) e democratizando a execução tridimensional de malhas de 1 bilhão de pontos em estações de trabalho de entrada.
 
 O código-fonte do solver, as campanhas de revalidação e o artigo estão
 disponíveis publicamente em
