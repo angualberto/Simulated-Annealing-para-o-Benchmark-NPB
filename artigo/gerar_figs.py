@@ -91,7 +91,8 @@ def elbow(x1, y1, xv, y2):
     arrow(xv, y1, xv, y2)
 
 boxes = {
-    "malha":   (0.3, 4.6, 2.4, 1.1, "Malha NPB SP\n1.061e12 pontos/iteração\n1.040.384 linhas (n=1020)", "#fdf3e3", "#bb8c2c"),
+    "swap":    (0.3, 5.8, 2.4, 0.6, "Memória Swap (SSD)\nOut-of-Core Dinâmico", "#fcf8e3", "#bb8c2c"),
+    "malha":   (0.3, 4.4, 2.4, 1.1, "Malha NPB SP\n1.061e12 pontos/iteração\n1.040.384 linhas (n=1020)", "#fdf3e3", "#bb8c2c"),
     "livre":   (0.3, 2.6, 2.4, 1.3, "Lista ``livre''\nblocos de 256 linhas\nPERIOD=8", "#f3e3fd", "#7c3fbb"),
     "decisor": (3.5, 3.0, 2.4, 2.4, "Decisor SA\nfração CPU/GPU por janela\nE(x) medido em tempo real\n(Metropolis + resfriamento)", "#eafbf0", "#3f7d3f"),
     "cpu":     (6.7, 4.4, 2.9, 1.3, "Pool de threads CPU\n(16 threads POSIX)\nsolve serial bit-idêntico", "#fdeaea", "#bb2c2c"),
@@ -102,10 +103,11 @@ boxes = {
 for b in boxes.values():
     box(*b)
 
-# fluxo da malha: vertical entre malha e lista livre (centro x=1.5)
+# fluxo swap -> malha e malha -> livre
+arrow(1.5, boxes["swap"][1], 1.5, boxes["malha"][1] + boxes["malha"][3])
 arrow(1.5, boxes["malha"][1], 1.5, boxes["livre"][1] + boxes["livre"][3])
 # malha -> decisor e livre -> decisor (horizontais, entram na borda esquerda)
-arrow(2.7, 5.15, 3.5, 5.15)
+arrow(2.7, 4.95, 3.5, 4.95)
 arrow(2.7, 3.25, 3.5, 3.25)
 # decisor -> CPU e decisor -> GPU (horizontais nos y exatos das caixas)
 arrow(5.9, 5.05, 6.7, 5.05)
