@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 
 \usepackage{sbc-template}
+\geometry{a4paper, top=3.5cm, left=3.5cm, right=2.5cm, bottom=2.5cm}
 \usepackage{graphicx,url}
 \usepackage[utf8]{inputenc}
 \usepackage[brazil]{babel}
@@ -8,13 +9,12 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{algpseudocode}
+\usepackage{titlesec}
 \usepackage{float}
 \newfloat{algoritmo}{htp}{loa}
 \floatname{algoritmo}{Algoritmo}
 
-\titlespacing*{\section}{0pt}{0.2ex}{-0.3ex}
-\titlespacing*{\subsection}{0pt}{0.2ex}{-0.3ex}
-\linespread{0.78}
+\linespread{0.89}
 
 \sloppy
 
@@ -99,7 +99,7 @@ paralelismo em massa com dependências curtas.
 Neste contexto, este trabalho apresenta um solver híbrido CPU--GPU da
 varredura pentadiagonal do NPB SP com três contribuições principais:
 
-\begin{itemize}
+\begin{itemize}\setlength\itemsep{0em}
   \item \textbf{Ajuste dinâmico por simulated annealing}: a fração de linhas
   atribuída à CPU e à GPU é decidida em tempo real por uma heurística SA que
   mede o custo real de cada janela de varredura, sem exigir conhecimento
@@ -464,14 +464,22 @@ A Figura~\ref{fig:telemetria} mostra a evolução do run: o tempo por
 iteração estabiliza em 160--170~ms após o warm-up do SA, e a temperatura da
 GPU cresce até o patamar de ~70~°C, 14~°C abaixo da trava térmica.
 
-\begin{figure}[ht]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=.35\textwidth]{figs/fig_telemetria.png}
-\caption{Evolução do run de 1000 iterações: tempo por varredura e
-  temperatura da GPU (RTX 5000 Ada).}
-\label{fig:telemetria}
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_telemetria.png}
+  \caption{Evolução do run de 1000 iterações: tempo por varredura e temperatura da GPU.}
+  \label{fig:telemetria}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_modos.png}
+  \caption{Tempo por varredura e vazão dos três modos de execução.}
+  \label{fig:modos}
+\end{minipage}
+\vspace{-2mm}
 \end{figure}
-\vspace{-4mm}
 
 \subsection{Híbrido versus modos puros}
 
@@ -498,13 +506,7 @@ Somente CPU & 611,1 ms & 48,6 & 100\% CPU \\
 \end{table}
 \vspace{-4mm}
 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=.35\textwidth]{figs/fig_modos.png}
-\caption{Tempo por varredura e vazão dos três modos de execução.}
-\label{fig:modos}
-\end{figure}
-\vspace{-4mm}
+
 
 O resultado é contra-intuitivo: o modo híbrido é 13\% mais rápido que o
 somente-GPU. A explicação está na natureza memory-bound do kernel e no
@@ -593,14 +595,22 @@ para o equilíbrio ~56/44 — e só os extremos forçados sobem
 converge para 0,40--0,44 sem risco de mínimos espúrios: a região ótima
 tem vale largo.
 
-\begin{figure}[ht]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=.40\textwidth]{figs/fig_campanhas.png}
-\caption{(a) Campanha EMA vs.\ SA por escala; (b) varredura de fração
-  forçada em 1024 blocos (linha tracejada: SA automático).}
-\label{fig:campanhas}
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_campanhas.png}
+  \caption{(a) EMA vs.\ SA; (b) fração forçada (SA automático em tracejado).}
+  \label{fig:campanhas}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_megabatch.png}
+  \caption{(a) Lotes por modo; (b) cuPentBatch vs solver (n=1020).}
+  \label{fig:megabatch}
+\end{minipage}
+\vspace{-2mm}
 \end{figure}
-\vspace{-4mm}
 
 \subsection{Mega-lote e comparação com cuPentBatch}\label{sec:megabatch}
 
@@ -642,26 +652,28 @@ coeficientes como argumentos do kernel. O ``SOTA'' warp-shuffle do tutorial
 reproduzido (10,9~ms) foi refutado por checksum divergente (~8\%) e não é
 considerado.
 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=.40\textwidth]{figs/fig_megabatch.png}
-\caption{(a) Mega-lote vs.\ BATCH=8 por modo; (b) kernel de produção vs.\
-  cuPentBatch em 262.144 linhas (n=1020).}
-\label{fig:megabatch}
-\end{figure}
-\vspace{-4mm}
+
 
 \subsection{Comparativo Final dos 5 Métodos de Balanceamento no Mega-lote}\label{sec:5metodos}
 
 Para consolidar os ganhos de desempenho, realizou-se uma campanha comparativa submetendo a malha de 1024 blocos aos cinco modos de escalonamento implementados (Figura~\ref{fig:5metodos}). O checksum numérico manteve-se estritamente idêntico em todos os cinco regimes.
 
-\begin{figure}[ht]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=.45\textwidth]{figs/fig_5metodos.png}
-\caption{Tempo mínimo por varredura dos cinco métodos de balanceamento avaliados no mega-lote.}
-\label{fig:5metodos}
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_5metodos.png}
+  \caption{Tempo mínimo por varredura dos 5 métodos avaliados no mega-lote.}
+  \label{fig:5metodos}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.75\linewidth]{figs/fig_classes.png}
+  \caption{(a) Projeção C/D/E; (b) benchmark publicado vs. fase (asterisco).}
+  \label{fig:classes}
+\end{minipage}
+\vspace{-2mm}
 \end{figure}
-\vspace{-4mm}
 
 O modo puramente em CPU ($147,64$~ms) estabelece o tempo base do processador, evidenciando a distância arquitetural. O particionamento Estático 50/50 ($51,52$~ms) mostra-se subótimo, amarrando a GPU para esperar a CPU. A execução Somente-GPU atinge $46,81$~ms, definindo o teto de desempenho do hardware gráfico isolado. O escalonamento Reativo por Taxa (EMA) atinge um bom tempo ($44,92$~ms), mas sofre de miopia local em otimizações gulosas. Por fim, o \textbf{SA Adaptativo proposto} não apenas escapa de vales subótimos (graças à aceitação de Metropolis), como encontra o ponto dinâmico de balanceamento (ex.: $789$ blocos para GPU e $235$ para CPU), atingindo o recorde da plataforma de \textbf{$35,89$~ms}. Este resultado comprova a premissa de que cooperar com a CPU mascara o gargalo do barramento e eleva a vazão global para cerca de \textbf{7,30 milhões de sistemas resolvidos por segundo}.
 
@@ -675,15 +687,7 @@ SA), o relatório projeta a \emph{fase pentadiagonal} das classes do NPB SP
 66,6~s; Classe E (1020$^3$, 500 passos) $\approx$ 416,5~s
 (Figura~\ref{fig:classes}(a)). A Figura~\ref{fig:classes}(b) posiciona esses números frente aos tempos publicados do SP Classe C completo (benchmark inteiro, incluindo RHS e comunicação), de 29,3~s (Titan) a 483,24~s (serial). Embora a comparação seja estrita à fase pentadiagonal e não ao benchmark completo, ela evidencia que a fase dominante de uma malha com mais de 1 bilhão de pontos (Classe E) é executável em segundos em um único nó heterogêneo, escala que a especificação original do NPB projetou para execução distribuída em sistemas de mais de 1000 processadores em paralelo~\cite{bailey1993nas}.
 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=.40\textwidth]{figs/fig_classes.png}
-\caption{(a) Projeção da fase pentadiagonal para as classes C/D/E;
-  (b) estado da arte publicado do SP C completo vs.\ projeção da fase penta
-  (asterisco: comparação por fase, não por benchmark).}
-\label{fig:classes}
-\end{figure}
-\vspace{-4mm}
+
 
 \subsection{Validação Transgeracional e Resiliência Out-of-Core}
 Para avaliar a portabilidade e a robustez do despachante adaptativo frente a variações severas de hardware, o solver com a malha de $1{,}061 \times 10^9$ pontos (4064 blocos, $n=1020$) foi submetido a execução em uma plataforma restrita (CPU quad-core, 3 threads úteis e GPU NVIDIA GeForce GTX 660 com arquitetura Kepler \texttt{sm\_30} e 2~GB de VRAM) sob regime ativo de paginação em disco (swap em SSD).
@@ -790,6 +794,7 @@ O código-fonte do solver, as campanhas de revalidação e o artigo estão
 disponíveis publicamente em
 \url{https://github.com/angualberto/Simulated-Annealing-para-o-Benchmark-NPB}.
 
+\scriptsize
 \bibliographystyle{sbc}
 \bibliography{artigo}
 

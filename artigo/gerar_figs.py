@@ -33,7 +33,7 @@ ax[1].set_ylabel("GFLOPS (28 flops/ponto)")
 ax[1].set_ylim(0, 215); ax[1].set_yticks([0, 50, 100, 150, 200])
 ax[1].set_title("(b) Vazão", fontsize=9.5)
 ax[1].grid(axis="y", alpha=0.3)
-fig.savefig(OUT + "fig_modos.png", dpi=300)
+fig.savefig(OUT + "fig_modos.png", dpi=300, bbox_inches='tight')
 plt.close(fig)
 
 # ---------------- Figura 2: evolucao do run (log_1T.txt) ----------------
@@ -61,7 +61,7 @@ lines1, labels1 = ax.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax.legend(lines1 + lines2, labels1 + labels2, loc="upper center",
           bbox_to_anchor=(0.5, -0.18), ncol=4, fontsize=8.5, frameon=True)
-fig.savefig(OUT + "fig_telemetria.png", dpi=300)
+fig.savefig(OUT + "fig_telemetria.png", dpi=300, bbox_inches='tight')
 plt.close(fig)
 
 # ---------------- Figura 3: arquitetura hibrida ----------------
@@ -134,7 +134,7 @@ dashed_arrow(5.9, 3.0, 6.7, 1.5) # decisor -> telemetria
 
 # GPU -> telemetria (vertical no centro)
 arrow(8.15, 2.4, 8.15, 1.8)
-fig.savefig(OUT + "fig_arquitetura.png", dpi=300)
+fig.savefig(OUT + "fig_arquitetura.png", dpi=300, bbox_inches='tight')
 plt.close(fig)
 
 print("Figuras geradas:", "OK")
@@ -182,7 +182,7 @@ try:
     sa_patch = mpatches.Patch(color='#bb8c2c', label='SA Adaptativo (Mais rápido)')
     ax.legend(handles=[sa_patch], loc='upper left')
 
-    fig.savefig(OUT + "fig_5metodos.png", dpi=300)
+    fig.savefig(OUT + "fig_5metodos.png", dpi=300, bbox_inches='tight')
     plt.close(fig)
     print("Figura 5 métodos gerada: OK")
 except Exception as e:
