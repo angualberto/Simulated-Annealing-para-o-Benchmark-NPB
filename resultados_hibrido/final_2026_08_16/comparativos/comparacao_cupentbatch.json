@@ -1,0 +1,48 @@
+{
+  "experimento": "comparacao_cupentbatch_vs_producao",
+  "data": "2026-08-16",
+  "hardware": {
+    "gpu": "2x NVIDIA RTX 5000 Ada Generation (device 0 nos experimentos), 32 GB GDDR6 (32.760 MiB), driver 580.65.06, TDP 250 W, sm_89",
+    "cpu": "AMD EPYC 9124 (Zen 4), 16 cores / 32 threads, 1 socket, 1,5-3,71 GHz, L3 64 MiB (nao usado neste benchmark)",
+    "ram": "125 GiB (NUMA node 0)",
+    "host": "virtual22.prjsieh.lncc.br (LNCC), Rocky Linux 9.6, kernel 5.14.0-570.32.1.el9_6",
+    "cuda": "13.0.48",
+    "quantidade": { "maquinas_nos_usadas": 1, "hosts": 1, "sockets_cpu": 1, "nucleos_fisicos": 16, "threads_ht": 32, "gpus_instaladas": 2, "gpus_usadas": 1, "gpu_usada_device": 0, "ram_gib": 125 },
+    "compilacao": "nvcc -O3 -fmad=false -arch=sm_89 -std=c++17"
+  },
+  "problema": {
+    "sistema": "pentadiagonal A*u=b, coefs SP: a=(-0.25), b=(-1), c=6, d=(-1), e=(-0.25)",
+    "n": 1020,
+    "rhs": "1.0 em todas as linhas",
+    "precisao": "double (8 B)"
+  },
+  "metodos": {
+    "producao": "kernel 1-thread/linha, layout natural (linha*n+i), LU banda completa (l1,l2,u0,u1,u2) pre-fatorada 1x no CPU, fatores em argumento/registrador",
+    "cupentbatch": "pentFactorBatch + pentSolveBatch (github munstermonster/cuPentBatch v1.0, kernels inalterados), layout interleaved (i*batch+t), fatoracao em GPU toda passada"
+  },
+  "tempos_kernel_min_ms": [
+    { "linhas": 2048,   "producao": 0.96,  "cpb_factor": 1.61,  "cpb_solve": 1.07,  "cpb_fs": 2.68,  "speedup_solve_vs_prod": 0.90, "speedup_fs_vs_prod": 0.36 },
+    { "linhas": 16384,  "producao": 1.94,  "cpb_factor": 2.52,  "cpb_solve": 2.29,  "cpb_fs": 4.81,  "speedup_solve_vs_prod": 0.85, "speedup_fs_vs_prod": 0.40 },
+    { "linhas": 131072, "producao": 18.39, "cpb_factor": 20.76, "cpb_solve": 21.30, "cpb_fs": 42.06, "speedup_solve_vs_prod": 0.86, "speedup_fs_vs_prod": 0.44 },
+    { "linhas": 262144, "producao": 36.25, "cpb_factor": 40.24, "cpb_solve": 38.29, "cpb_fs": 78.53, "speedup_solve_vs_prod": 0.95, "speedup_fs_vs_prod": 0.46 }
+  ],
+  "tempos_media_ms_262144": { "producao": 36.33, "cpb_factor": 40.33, "cpb_solve": 38.58 },
+  "validacao_262144": {
+    "checksum_cupentbatch": 7.63448874e7,
+    "checksum_producao": 7.63448874e7,
+    "checksums_identicos": true,
+    "max_abs_diff": 1.11e-16,
+    "residuo_inf_cupentbatch": 5.412e-16,
+    "residuo_inf_producao": 4.441e-16,
+    "conclusao": "ambos resolvem o MESMO sistema exato A*u=b dentro do arredondamento"
+  },
+  "dma_rhs_h2d_ms": { "linhas_2048": 0.7, "linhas_16384": 5.4, "linhas_131072": 43.1, "linhas_262144": 86.0 },
+  "conclusoes": [
+    "No problema do SP (n=1020, matriz constante), o kernel de PRODUCAO (layout natural + fatores em registrador) e mais rapido que o cuPentBatch em TODAS as escalas: solve 0.85-0.95x, factor+solve 0.36-0.46x.",
+    "Causa: cuPentBatch rele os 5 arrays de fatoracao (ds,dl,d,du,dw) da DRAM a cada solve (10,7 GB em 262144 linhas); o kernel de producao usa fatores pre-fatorados 1x no CPU em argumentos/registradores.",
+    "O ganho de coalescencia do layout interleaved NAO compensa o custo de releitura da fatoracao neste regime (traffic-bound, nao latency-bound como nos workloads do paper com n ate 1e4).",
+    "DMA do RHS (2,14 GB H2D) = 86 ms > tempo do solve (36-38 ms): qualquer pipeline 'tudo-em-GPU' deste problema e dominado pela transferencia, nao pelo kernel (o paper nao inclui transferencia nos numeros).",
+    "Implicacao p/ dispatcher: GPU-only via dispatcher = 127,1 ms vs kernel puro 36,2 ms (3,5x) - o gargalo do dispatcher e o overhead POR LOTE (8 blocos = 2048 linhas ~ 1 ms/lancamento, incl. sync+memcpy), nao o kernel. Trocar p/ kernel interleaved nao ajudaria; reduzir numero/overhead de lancamentos sim."
+  ],
+  "origem": "bench_cupentbatch.cu compilado e rodado no servidor 146.134.87.2 (/prj/prjsieh/agualber/poroso/poroso/seg/bench_cupentbatch)"
+}

@@ -1,0 +1,22 @@
+{
+  "experimento": "Despacho com lista ligada hierarquica (segmentos->blocos) + indice",
+  "gpu": {"nome": "NVIDIA RTX 5000 Ada Generation", "cc": 8.9, "sms": 100, "bloco_otimo": 768},
+  "cpu": {"workers_fisicos": 16},
+  "n_elementos": 67108864,
+  "fma_por_elemento": 128,
+  "gpu_lag": 1,
+  "estrutura": {"blocos": 64, "blocos_por_segmento": 8, "segmentos": 8},
+  "tempo_total_ms": 875.884,
+  "blocos": {"total": 64, "gpu": 40, "cpu": 24},
+  "resposta": {"gpu_ms_por_bloco": 0.273624, "cpu_ms_por_bloco": 25.1533},
+  "traco": [
+    {"t_ms": 0.002203, "frac_cpu": 0.5, "destino": 0},
+    {"t_ms": 0.004586, "frac_cpu": 0.5, "destino": 0},
+    {"t_ms": 0.006519, "frac_cpu": 0.5, "destino": 0},
+    {"t_ms": 2.25932, "frac_cpu": 0.5, "destino": 1},
+    {"t_ms": 4.49028, "frac_cpu": 0.0108332, "destino": 1},
+    {"t_ms": 6.68844, "frac_cpu": 0.0108399, "destino": 1},
+    {"t_ms": 8.88459, "frac_cpu": 0.0107963, "destino": 1},
+    {"t_ms": 11.0798, "frac_cpu": 0.0107746, "destino": 1}
+  ]
+}

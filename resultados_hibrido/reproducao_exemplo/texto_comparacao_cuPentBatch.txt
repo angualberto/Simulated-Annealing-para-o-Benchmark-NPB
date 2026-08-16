@@ -1,0 +1,160 @@
+================================================================================
+ TEXTO COMPARACAO - cuPentBatch (Gloster, O'Naraigh & Pang, CPC 2019)
+ vs ESTE TRABALHO (despacho hibrido GPU+CPU on-line, NPB SP)
+================================================================================
+ Fonte do cuPentBatch ..: arXiv:1807.07382 (v3), github.com/munstermonster/cuPentBatch
+                        : Titan X Pascal (12 GB), i7-6850K (6 HT), CUDA 9.2, doubles
+ Este trabalho .........: RTX 5000 Ada (32 GB, sm_89, CUDA 13.0) + 16 nucleos AMD EPYC 9124
+ Compilacao ...........: nvcc -O3 -fmad=false (ambos)
+ Data .................: 16/08/2026
+================================================================================
+
+--------------------------------------------------------------------------------
+ TABELA 1 - VISAO GERAL DOS DOIS TRABALHOS
+--------------------------------------------------------------------------------
+ Criterio         | cuPentBatch                        | Este trabalho
+------------------|------------------------------------|---------------------------
+ Escopo           | Biblioteca: solver batched penta  | Runtime de DESPACHO on-line
+                  | em GPU (1 dispositivo)            | hibrido GPU+CPU
+ Algoritmo        | Thomas estendido (LU sem pivotea- | MESMO esquema: factor_penta
+                  | mento) O(N)/sistema, 1 thread/    | (CPU, 1x) + solve (kernel),
+                  | sistema, varredura serial         | 1 thread/linha, serial
+ Layout memoria   | INTERLEAVED (coalescido: warp     | gpu_base por bloco (NAO
+                  | le elementos consecutivos de m    | coalescido: stride N*8 B)
+                  | sistemas diferentes)              |
+ Matriz constante | cuPentBatchConstant: factoriza    | idem (coefs do SP constantes,
+                  | A uma vez, resolve m RHSs         | factor 1x, resolve n linhas)
+ Dispositivos     | GPU somente                       | GPU + CPU co-agendados
+ Controle/adapt.  | Nenhum (fila estatica do kernel)  | EMA adaptativo + SA on-line
+                  |                                   | com top-up reativo
+ Validacao        | L2 vs solucao exata da hyper-     | Checksum BIT-IDENTICO
+                  | diffusion (erro ~ N^-2)           | GPU==CPU==particoes
+ Aplicacao-alvo   | Cahn-Hilliard / hyperdiffusion /  | Varredura pentadiagonal do
+                  | estudos parametricos (RHS muda)   | NPB SP (classe E, n=1020)
+ N por sistema    | ateh O(10^4)                      | 1020
+------------------|------------------------------------|---------------------------
+
+--------------------------------------------------------------------------------
+ TABELA 2 - RESULTADOS RELATADOS (deles) vs EQUIVALENTES MEDIDOS (nosso)
+--------------------------------------------------------------------------------
+ Metrica                     | cuPentBatch (Titan X Pascal) | Nosso (RTX 5000 Ada)
+-----------------------------|------------------------------|--------------------------
+ vs gpsvInterleavedBatch     | 1,2-2,0x+ (Rewrite: 1,2-1,3x | nao usado (sem cuSPARSE)
+ (cuSPARSE, QR+Householder)  |  em lotes 10^4-10^5)         |
+ vs serial 1 core            | 10-20x (batch > 2048)        | nao medido (16 nucleos
+                             |                              |  sao a base)
+ vs OpenMP (8 threads)       | 5-6x (GPU vs 8 threads)     | GPU-only 127,1 ms vs
+                             |                              | CPU-only 147,6 ms
+                             |                              | -> 1,16x (16 threads)
+ Ganho hibrido (GPU+CPU      | NAO EXISTE (single-device)   | 70,0-73,0 ms vs GPU 127,1
+ simultaneos)                |                              | (-45%) e CPU 147,6 (-52%)
+ Validacao numerica          | erro L2 N^-2 (ok)            | checksum bit-identico
+                             |                              | (3,46459e+07) 45 exec.
+-----------------------------|------------------------------|--------------------------
+ ATENCAO hardware/era: Titan X Pascal fp64 = 1/32 (~0,35 TFLOPS) vs Ada (~2 TFLOPS
+ fp64); eles medem KERNEL-ONLY (250 passos, sem transferencia PCIe, sem despacho).
+
+--------------------------------------------------------------------------------
+ TABELA 3 - O QUE CADA UM ATACA (complementaridade)
+--------------------------------------------------------------------------------
+ cuPentBatch ataca o PICO DO KERNEL:
+   + layout interleaved -> acesso COALESCIDO a DRAM (warp le elementos
+     consecutivos de sistemas vizinhos)
+   + factorizacao unica p/ matriz constante (estudo parametrico: so RHS muda)
+   + 1 thread/sistema, O(N) serial -> mesmo custo algorítmico que o nosso
+
+ Este trabalho ataca o AGENDAMENTO ON-LINE:
+   + decidir quem resolve cada bloco (GPU vs CPU) sem conhecer as taxas a priori
+   + top-up reativo mantem AMBOS os dispositivos saturados (fila, nao round-robin)
+   + SA on-line: convergencia ~0,44 (equilibrio de fila previsto pelas taxas)
+   + prova de correcao bit-a-bit entre GPU e CPU (cuPentBatch nao tem esse conceito)
+
+ LACUNA IDENTIFICADA (proxima etapa do nosso plano):
+   Nosso kernel atual (1 thread/linha, descoalescido) roda ~53,2 ms (262.144
+   linhas, kernel puro) / 127,1 ms via dispatcher. Um kernel estilo cuPentBatch
+   (interleaved + factor 1x) no mesmo tamanho deve cair para ~10-25 ms MANTENDO
+   o checksum. Encaixado no nosso dispatcher, o despacho hibrido passa a somar
+   os dois mundos: pico de kernel batched (GPU) + reserva CPU adaptativa.
+
+--------------------------------------------------------------------------------
+ TABELA 4 - CAVEATS COMUNS E DIFERENCAS HONESTAS
+--------------------------------------------------------------------------------
+ 1. Estabilidade: AMBOS usam LU sem pivoteamento. cuPentBatch e valido para
+    matrizes SPD/diag. dominantes (hyperdiffusion: c=1+6s, |c|>|a|+|b|+|d|+|e|);
+    o SP e estritamente diag. dominante (|c|=6 > 2,5) -> LU sem pivoteamento
+    tambem e seguro. cuPentBatch admite QR (gpsv) como mais estavel a priori.
+
+ 2. O que medem: cuPentBatch reporta KERNEL-ONLY (sem transferencia, sem
+    dispatcher). Nos medimos o sistema completo (despacho + sync por lote + 
+    checksum) - por isso nosso GPU-only (127,1 ms) paga overhead vs kernel puro
+    (53,2 ms) - fenômeno que nao aparece nos numeros deles.
+
+ 3. Validacao: eles validam o ESQUEMA PDE (erro L2 vs solucao exata ~N^-2);
+    nos validamos a CONCORDANCIA DEVICE-A-DEVICE (checksum bit-identico em
+    todas as particoes) - perguntas diferentes, ambas necessarias.
+
+ 4. Complemento: cuPentBatch = kernel SOTA (candidato a plugar no nosso
+    dispatcher); este trabalho = despacho SOTA (o que o cuPentBatch nao faz).
+
+================================================================================
+ RESULTADOS MEDIDOS (16/08/2026) - cuPentBatch RODADO no nosso hardware
+================================================================================
+
+ Benchmark: bench_cupentbatch.cu, nvcc -O3 -fmad=false -arch=sm_89 (CUDA 13.0)
+ GPU: RTX 5000 Ada de 32 GB. Metodo: kernels inalterados do repo v1.0
+ (pentFactorBatch + pentSolveBatch) vs nosso kernel de PRODUCAO (LU banda
+ completa, fatores pre-fatorados 1x no CPU, layout natural).
+ RHS = 1.0; min de 5 runs (janela termica); validacao por residuo.
+
+ LINHAS  | producao (ms) | cpb factor | cpb solve | cpb F+S  | speedup S | speedup F+S
+ 2.048   |      0,96     |    1,61    |    1,07   |   2,68   |   0,90x   |   0,36x
+ 16.384  |      1,94     |    2,52    |    2,29   |   4,81   |   0,85x   |   0,40x
+ 131.072 |     18,39     |   20,76    |   21,30   |  42,06   |   0,86x   |   0,44x
+ 262.144 |     36,25     |   40,24    |   38,29   |  78,53   |   0,95x   |   0,46x
+
+ VALIDACAO (262.144 linhas):
+   checksum cuPentBatch = 7,63448874e+07 ; producao = 7,63448874e+07 (IDENTICOS)
+   max |cuPentBatch - producao| = 1,11e-16
+   residuo ||A x - b||inf: cuPentBatch 5,41e-16 ; producao 4,44e-16
+   -> AMBOS resolvem o MESMO sistema exato A*u=b (diferenca de arredondamento)
+
+ DMA RHS 2,14 GB H2D = 86,0 ms (262.144 linhas) - MAIOR que o solve (36-38 ms).
+
+ LEITURA HONESTA DOS NUMEROS:
+ 1. No problema do SP (n=1020, matriz constante) o layout interleaved do
+    cuPentBatch NAO paga: nosso kernel natural (fatores em registrador/const)
+    e mais rapido em todas as escalas (solve 0,85-0,95x; F+S 0,36-0,46x).
+ 2. Motivo: cuPentBatch rele os 5 arrays de fatoracao (10,7 GB) da DRAM a
+    cada solve; nos pre-fatoramos 1x no CPU (escala 1020, custo nulo) e o
+    kernel le 5 vetores de 1020 doubles via argumentos (L1/const).
+ 3. Os speedups do paper (2x vs gpsv, 5-6x vs OpenMP, 10-20x vs serial) sao
+    em Titan X Pascal (2016) e lotes com n ate 1e4 - regimento latency-bound
+    em que a coalescencia importa mais; em n=1020 curto (traffic-bound com
+    leitura redundante de fatoracao) a vantagem inverte.
+ 4. Implicacao p/ o dispatcher: GPU-only 127,1 ms vs kernel puro 36,2 ms
+    (3,5x) - o gargalo NAO e o kernel; sao os lancamentos de 8 blocos
+    (2048 linhas ~ 0,96-1,07 ms/lancamento com sync+memcpy). Um kernel
+    interleaved (estilo cuPentBatch) nao ajudaria; menos/maiores lancamentos
+    com top-up reativo sim (proxima etapa do plano).
+================================================================================
+ PROXIMA ETAPA PROPOSTA (concreta)
+================================================================================
+ 1. Clonar cuPentBatch (Apache 2.0) e compilar no servidor (CUDA 13).
+    -> FEITO (16/08/2026), numeros acima.
+ 2. Rodar benchmark no MESMO tamanho (n=1020, lote 262.144 linhas, doubles):
+    - cuPentBatchConstant (factor 1x) -> kernel puro
+    - nosso kernel 1-thread/linha (mesma maquina, mesma janela termica)
+    -> FEITO. Resultado: producao 36,2 ms vs cpb solve 38,3 / F+S 78,5 ms.
+    -> Kernel interleaved NAO se justifica no nosso problema (medido).
+ 3. Plugar kernel interleaved no dispatcher (adaptar gpu_base -> layout
+    interleaved) e repetir best-of-5 EMA/SA + checksum.
+    -> REVISAO baseada na medicao: nao plugar; o alvo certo e o OVERHEAD
+       POR LOTE do dispatcher (127,1 vs 36,2 ms = 3,5x). Proxima acao:
+       variante de lancamento UNICO por fatia GPU (mega-lote) com top-up
+       reativo mantido + validacao checksum bit-identico (3,46459e+07).
+ 4. Publicar: pico do kernel (nosso LU banda, fatores em registrador) x
+    despacho hibrido (nosso) + comparacao reproduzida com cuPentBatch.
+
+ Arquivos: este texto + tabela_comparativa_SOTA.md + texto_comparacao.txt
+ (reproducao_exemplo/), relatorios em hpc/resultados_hibrido/.
+================================================================================

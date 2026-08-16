@@ -1,0 +1,21 @@
+{
+  "experimento": "Lista ligada hierarquica com indice + problema real SP pentadiagonal (controle por simulated annealing online)",
+  "gpu": {"nome": "NVIDIA RTX 5000 Ada Generation", "cc": 8.9, "sms": 100},
+  "cpu": {"workers_fisicos": 16},
+  "problema": {"tipo": "SP pentadiagonal (a=-.25 b=-1 c=6 d=-1 e=-.25)", "n": 1020, "linhas": 16384},
+  "estrutura": {"blocos": 64, "periodos": 16, "blocos_por_periodo": 4, "linhas_por_bloco": 256},
+  "controlador": {"tipo": "simulated_annealing_online", "T0_ms": 1, "alpha": 0.9, "T_freeze": 0.05, "dx": 0.03, "janela_blocos": 16, "frac_fixo": -1},
+  "tempo_total_ms": 6.72205,
+  "blocos": {"total": 64, "gpu": 43, "cpu": 21},
+  "resposta": {"gpu_ms_por_bloco": 0.153235, "cpu_ms_por_bloco": 0.223313},
+  "checksum": 1.88105e+06,
+  "traco": [
+    {"t_ms": 1.11189, "frac_cpu": 0.416022, "destino": 0},
+    {"t_ms": 1.12068, "frac_cpu": 0.416854, "destino": 0},
+    {"t_ms": 2.11713, "frac_cpu": 0.416854, "destino": 0},
+    {"t_ms": 3.10433, "frac_cpu": 0.396403, "destino": 1},
+    {"t_ms": 4.09012, "frac_cpu": 0.396403, "destino": 1},
+    {"t_ms": 5.08132, "frac_cpu": 0.418684, "destino": 0},
+    {"t_ms": 6.06907, "frac_cpu": 0.401586, "destino": 1}
+  ]
+}

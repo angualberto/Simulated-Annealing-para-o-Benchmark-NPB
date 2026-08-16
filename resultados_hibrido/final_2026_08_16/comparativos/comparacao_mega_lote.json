@@ -1,0 +1,39 @@
+{
+  "experimento": "mega_lote_2026-08-16",
+  "resumo": "Variante MEGA-LOTE do dispatcher hibrido: blocos GPU decididos (EMA/SA/top-up, identicos) acumulam em pending[] e sao lancados em lotes de MEGA=128 blocos (1 kernel + 1 sync), em vez de 1 launch+sync por lote de BATCH=8. Sem mudanca no kernel, na decisao nem no checksum.",
+  "hardware": { "gpu": "2x NVIDIA RTX 5000 Ada Generation (device 0), 32 GB GDDR6, driver 580.65.06, TDP 250 W, sm_89", "cpu": "AMD EPYC 9124 (Zen 4), 16 cores / 32 threads, 1,5-3,71 GHz (16 workers fisicos)", "ram": "125 GiB", "host": "virtual22.prjsieh.lncc.br (LNCC), Rocky Linux 9.6, kernel 5.14.0-570.32.1.el9_6", "cuda": "13.0.48" },
+  "quantidade": { "maquinas_nos_usadas": 1, "hosts": 1, "sockets_cpu": 1, "nucleos_fisicos": 16, "threads_ht": 32, "gpus_instaladas": 2, "gpus_usadas": 1, "gpu_usada_device": 0, "ram_gib": 125 },
+  "problema": { "n": 1020, "blocos": 1024, "linhas_por_bloco": 256, "linhas": 262144, "rhs": "sin/cos do SP" },
+  "compilacao": "nvcc -O3 -fmad=false -arch=sm_89 -lpthread",
+  "referencia_antiga_ms": {
+    "gpu_only": 127.12,
+    "cpu_only": 147.63,
+    "frac_0_5": 71.20,
+    "sa_auto": 72.98,
+    "ema_auto": 70.00
+  },
+  "resultados_mega_ms": [
+    { "modo": "gpu_only (HSP_FIXED_FRAC=0.0)", "binario": "sp_sa_mega", "tempo_ms": 47.302, "blocos": { "gpu": 1024, "cpu": 0 }, "checksum": 3.46459e7, "variacao_vs_antigo": -0.63 },
+    { "modo": "cpu_only (HSP_FIXED_FRAC=1.0)", "binario": "sp_sa_mega", "tempo_ms": 147.870, "blocos": { "gpu": 0, "cpu": 1024 }, "checksum": 3.46459e7, "variacao_vs_antigo": 0.0 },
+    { "modo": "frac_0_5 (HSP_FIXED_FRAC=0.5)", "binario": "sp_sa_mega", "tempo_ms": 51.524, "blocos": { "gpu": 684, "cpu": 340 }, "checksum": 3.46459e7, "variacao_vs_antigo": -0.28 },
+    { "modo": "sa_auto (1a exec)", "binario": "sp_sa_mega", "tempo_ms": 42.436, "blocos": { "gpu": 745, "cpu": 279 }, "checksum": 3.46459e7, "variacao_vs_antigo": -0.42 },
+    { "modo": "sa_auto (2a exec)", "binario": "sp_sa_mega", "tempo_ms": 42.453, "blocos": { "gpu": 751, "cpu": 273 }, "checksum": 3.46459e7, "variacao_vs_antigo": -0.42 },
+    { "modo": "ema_auto", "binario": "sp_ema_mega", "tempo_ms": 47.116, "blocos": { "gpu": 712, "cpu": 312 }, "checksum": 3.46459e7, "variacao_vs_antigo": -0.33 }
+  ],
+  "checksum": { "esperado": 3.4645900000e7, "observado_em_todos": 3.46459e7, "bit_identico": true },
+  "bugs_corrigidos": [
+    "v1 do mega-lote estourava pending[] (npend=127+8=135 > MEGA=128) -> corrupcao de heap (double free) em frac=0.5; corrigido com to_gpu_cap = min(to_gpu_n, MEGA-npend)"
+  ],
+  "observacoes": [
+    "GPU-only via dispatcher caiu de 127,12 para 47,30 ms (-63%): proximo do kernel puro (~36-46 ms), faltando ainda DMA+decisoes",
+    "SA auto 42,4 ms (-42%): novo recorde absoluto do projeto",
+    "frac 0,5: 71,20 -> 51,52 ms; platô do sweep deve mudar (extremidades sobem, meio desce) - rever sweep se necessario",
+    "checksum bit-identico 3,46459e7 em TODOS os modos: particionamento continua consistente GPU==CPU",
+    "relacionado: comparacao com cuPentBatch (comparacao_cupentbatch.json) - kernel de producao 36,2 ms vs cpb solve 38,3 (0,95x), F+S 78,5 (0,46x)"
+  ],
+  "arquivos": {
+    "json": ["mega_lote/g0.json", "mega_lote/g1.json", "mega_lote/g05.json", "mega_lote/auto.json", "mega_lote/sa2.json", "mega_lote/ema.json"],
+    "fontes": ["scripts/hibrido/hybrid_hlist_sp.cu (MEGA/BATCH), hybrid_hlist_sp_sa.cu"],
+    "binarios_servidor": ["sp_sa_mega", "sp_ema_mega"]
+  }
+}

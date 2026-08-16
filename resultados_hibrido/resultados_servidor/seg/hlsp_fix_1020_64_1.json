@@ -1,0 +1,20 @@
+{
+  "experimento": "Lista ligada hierarquica com indice + problema real SP pentadiagonal",
+  "gpu": {"nome": "NVIDIA RTX 5000 Ada Generation", "cc": 8.9, "sms": 100},
+  "cpu": {"workers_fisicos": 16},
+  "problema": {"tipo": "SP pentadiagonal (a=-.25 b=-1 c=6 d=-1 e=-.25)", "n": 1020, "linhas": 16384},
+  "estrutura": {"blocos": 64, "periodos": 16, "blocos_por_periodo": 4, "linhas_por_bloco": 256},
+  "tempo_total_ms": 6.76398,
+  "blocos": {"total": 64, "gpu": 42, "cpu": 22},
+  "resposta": {"gpu_ms_por_bloco": 0.173049, "cpu_ms_por_bloco": 0.216311},
+  "checksum": 1.88105e+06,
+  "traco": [
+    {"t_ms": 1.14426, "frac_cpu": 0.416024, "destino": 0},
+    {"t_ms": 1.15311, "frac_cpu": 0.416024, "destino": 0},
+    {"t_ms": 2.15824, "frac_cpu": 0.416024, "destino": 0},
+    {"t_ms": 3.14219, "frac_cpu": 0.431255, "destino": 1},
+    {"t_ms": 4.12725, "frac_cpu": 0.421296, "destino": 1},
+    {"t_ms": 5.16227, "frac_cpu": 0.36554, "destino": 0},
+    {"t_ms": 6.15271, "frac_cpu": 0.508849, "destino": 1}
+  ]
+}

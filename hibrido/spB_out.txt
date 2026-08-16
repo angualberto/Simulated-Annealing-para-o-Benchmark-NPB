@@ -1,0 +1,101 @@
+ No input file inputsp.data. Using compiled defaults
+
+
+ NAS Parallel Benchmarks 4.1 CUDA C++ version - SP Benchmark
+
+ Size:  102x 102x 102
+ Iterations:  400    dt:   0.001000
+
+ Time step    1
+ Time step   20
+ Time step   40
+ Time step   60
+ Time step   80
+ Time step  100
+ Time step  120
+ Time step  140
+ Time step  160
+ Time step  180
+ Time step  200
+ Time step  220
+ Time step  240
+ Time step  260
+ Time step  280
+ Time step  300
+ Time step  320
+ Time step  340
+ Time step  360
+ Time step  380
+ Time step  400
+ Verification being performed for class B
+ accuracy setting for epsilon =  1.0000000000000E-08
+ Comparison of RMS-norms of residual
+           1 6.9032935799984E+01 6.9032935799980E+01 5.1464038688639E-14
+           2 3.0951344880843E+01 3.0951344880840E+01 8.0922594904909E-14
+           3 4.1033366470175E+01 4.1033366470170E+01 1.1220909527549E-13
+           4 3.8647690096039E+01 3.8647690096040E+01 3.6034851206605E-14
+           5 5.6434822725956E+01 5.6434822725960E+01 7.0129094892385E-14
+ Comparison of RMS-norms of solution error
+           1 9.8100061901885E-03 9.8100061901880E-03 4.8982477026996E-14
+           2 1.0228279056704E-03 1.0228279056700E-03 3.8923364872010E-13
+           3 1.7205979116917E-03 1.7205979116920E-03 1.5173555736667E-13
+           4 1.6944794282312E-03 1.6944794282310E-03 1.0531829104436E-13
+           5 1.8474562639812E-02 1.8474562639810E-02 8.2066804371144E-14
+ Verification Successful
+
+
+ SP Benchmark Completed
+ class_npb       =                        B
+ Size            =            102x 102x 102
+ Iterations      =                      400
+ Time in seconds =                     1.64
+ Mop/s total     =                215963.39
+ Operation type  =           floating point
+ Verification    =               SUCCESSFUL
+ Version         =                      4.1
+ Compile date    =              16 Aug 2026
+ NVCC version    =                  13.0.48
+ CUDA version    =                  13.0.48
+
+ Compile options:
+    CC           = ${NVCC} ${EXTRA_STUFF}
+    CLINK        = $(CC)
+    C_LIB        = -lm 
+    C_INC        = -I../common 
+    CFLAGS       = -O3
+    CLINKFLAGS   = -O3
+    RAND         = (none)
+
+ Hardware:
+    CPU device   = AMD EPYC 9124 16-Core Processor
+    GPU device   = NVIDIA RTX 5000 Ada Generation
+
+ Software:
+    Parameters   = GPU Kernel	        Threads Per Block
+                       sp-add	                       32
+             sp-compute-rhs-1	                       32
+             sp-compute-rhs-2	                      512
+              sp-error-norm-1	                     1024
+              sp-error-norm-2	                     1024
+               sp-exact-rhs-1	                       32
+               sp-exact-rhs-2	                       32
+               sp-exact-rhs-3	                       32
+               sp-exact-rhs-4	                       32
+                sp-initialize	                       32
+                sp-rhs-norm-1	                     1024
+                sp-rhs-norm-2	                     1024
+                    sp-txinvr	                       32
+                   sp-x-solve	                      256
+                   sp-y-solve	                       64
+                   sp-z-solve	                       64
+
+
+----------------------------------------------------------------------
+ NPB-CPP is developed by:
+            Dalvan Griebler <dalvangriebler@gmail.com>
+            Gabriell Araujo <hexenoften@gmail.com>
+            Júnior Löff <loffjh@gmail.com>
+
+ In case of problems, send an email to us
+----------------------------------------------------------------------
+

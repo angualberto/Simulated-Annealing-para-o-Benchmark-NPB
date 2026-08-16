@@ -1,0 +1,106 @@
+================================================================================
+ ESPECIFICACOES DA MAQUINA DE MEDICAO (servidor LNCC)
+ Host: virtual22.prjsieh.lncc.br | LNCC - Laboratorio Nacional de Computacao Cientifica
+--------------------------------------------------------------------------------
+ SO   : Rocky Linux 9.6 (Blue Onyx) | kernel 5.14.0-570.32.1.el9_6 | x86_64
+ CPU  : AMD EPYC 9124 (Zen 4) - 16 cores / 32 threads, 1 socket
+        base 1,5 GHz / max 3,71 GHz | L1d 512 KiB, L1i 512 KiB,
+        L2 16 MiB (16x1), L3 64 MiB (4x16)
+ RAM  : 125 GiB (NUMA node 0; CPUs 0-31)
+ GPU  : 2x NVIDIA RTX 5000 Ada Generation (todos os experimentos no device 0)
+        32 GB GDDR6 (32.760 MiB) | driver 580.65.06 | TDP 250 W | sm_89
+ CUDA : 13.0 (V13.0.48) | compilacao: nvcc -O3 -fmad=false -arch=sm_89
+--------------------------------------------------------------------------------
+ QUANTIDADE DE MAQUINAS E RECURSOS UTILIZADOS (todos os runs abaixo):
+   maquinas (nos) usadas ......: 1 (no unico)
+   hosts que executaram ...: 1 (virtual22.prjsieh.lncc.br)
+   CPU do host ...............: 1 socket AMD EPYC 9124 (16 cores / 32 threads HT)
+   GPUs instaladas no no ......: 2 x NVIDIA RTX 5000 Ada
+   GPUs USADAS nos experimentos: 1 (device 0; a 2a ficou ociosa)
+   RAM do no ..................: 125 GiB
+================================================================================
+ COMPARATIVO GERAL - TODOS OS METODOS NO MESMO PROBLEMA
+ Varredura pentadiagonal NPB SP (n=1020, doubles, RTX 5000 Ada 32 GB + 16 cores EPYC)
+ Data: 16/08/2026 (re-run completo 11:36-11:37 UTC) | nvcc -O3 -fmad=false -arch=sm_89
+================================================================================
+
+--------------------------------------------------------------------------------
+ A. NIVEL DE KERNEL (262.144 linhas, 1 lancamento, min-of-5, janela termica)
+--------------------------------------------------------------------------------
+ Metodo                          | ms (262144) | 2048   | 16384 | 131072
+---------------------------------|-------------|--------|-------|--------
+ Nosso kernel PRODUCAO (LU banda |     36,23   |  0,96  |  1,94 |  18,39
+  completa, fatores pre-fatorados|             |        |       |
+  1x no CPU, registrador/const)  |             |        |       |
+ cuPentBatch pentSolveBatch      |     38,31   |  1,07  |  2,29 |  21,30
+ cuPentBatch pentFactorBatch     |     40,24   |  1,61  |  2,52 |  20,76
+ cuPentBatch factor+solve total  |     78,50   |  2,68  |  4,81 |  42,06
+ Kernel "baseline simplificado"  |     46,18   |  (exemplo; NAO exato, ver C)
+  do exemplo                     |             |        |       |
+--------------------------------------------------------------------------------
+ Solver "SOTA" warp-shuffle do   |     10,9    |  (exemplo reproduzido -> ERRADO:
+  paper/tutorial                 |            |   checksum diverge ~8%; ignora
+  (advanced_vs_baseline)         |            |   diagonal a, desacopla chunks)
+--------------------------------------------------------------------------------
+ Speedups (kernel 262144):
+   producao vs cuPentBatch solve : 1,05x (nosso mais rapido)
+   producao vs cuPentBatch F+S   : 2,17x (fatoracao nao custa: feita no CPU 1x)
+   producao vs "SOTA" invalido   : irreal (SOTA errado; o correto aproxima 1,05x)
+
+--------------------------------------------------------------------------------
+ B. NIVEL DE SISTEMA / DESPACHO (1024 blocos = 262.144 linhas, incl. decisao)
+--------------------------------------------------------------------------------
+ Modo               | antes (BATCH=8) | mega-lote (MEGA=128) | variacao
+--------------------|-----------------|----------------------|---------
+ all-GPU forcado    |  127,12 ms      |   48,08 ms           |  -63%
+ all-CPU forcado    |  147,63 ms      |  147,87 ms           |    0%
+ frac 0,5 forcada   |   71,20 ms      |   51,68 ms           |  -28%
+ EMA automatico     |   70,00 ms      |   47,29 ms           |  -33%
+ SA  automatico     |   72,98 ms      |   42,72 ms           |  -42%
+--------------------|-----------------|----------------------|---------
+ Speedups (mega-lote):
+   SA 42,72 ms vs CPU-only 147,87 = 3,46x
+   SA 42,72 ms vs GPU-only antigo 127,12 = 2,98x
+   SA 42,72 ms vs GPU-only mega 48,08 = 1,13x  (hibrido ainda ganha do GPU puro)
+   SA 42,72 ms vs EMA 47,29 = 1,11x
+   dispatcher GPU-only mega 48,08 vs kernel puro 36,23 = overhead 1,33x (era 3,5x)
+
+--------------------------------------------------------------------------------
+ C. VALIDACAO E HONESTIDADE NUMERICA
+--------------------------------------------------------------------------------
+ 1. Checksum do projeto (SP sin/cos): 3,46459000e+07 BIT-IDENTICO em TODOS os
+    modos e particoes (GPU==CPU==splits; 45+ execucoes; incl. mega-lote).
+ 2. cuPentBatch vs nosso kernel de producao (RHS=1.0):
+    checksums IDENTICOS (7,63448874e+07) | max |diff| = 1,1e-16
+    residuo ||A x - b||inf: cuPentBatch 5,4e-16 | producao 4,4e-16
+    -> AMBOS resolvem o MESMO sistema exato A*u=b.
+ 3. Kernel "baseline simplificado" do exemplo: residuo ~3,75 -> NAO exato
+    (eliminacao sem atualizar a diagonal). O checksum de referencia do projeto
+    e o da PRODUCAO (LU completa). O exemplo usava o simplificado: a validacao
+    por checksum provou CONSISTENCIA de particionamento, nao exatidao - agora
+    provada (residuo < 1e-15) pelo crosstalk com cuPentBatch.
+ 4. "SOTA" warp-shuffle do tutorial: 10,9 ms mas solucao ERRADA (checksum
+    diverge ~8%) - refutado por reproducao; o interleaved CORRETO (cuPentBatch)
+    rende apenas 0,95-1,05x no SP porque rele a fatoracao da DRAM (10,7 GB).
+ 5. DMA: RHS 2,14 GB H2D = 86 ms > solve 36-38 ms -> qualquer pipeline
+    tudo-em-GPU do SP classe E e dominado pela transferencia, nao pelo kernel.
+
+--------------------------------------------------------------------------------
+ D. CONTRIBUICOES E PRINCIPIO DA FILA (por que o hibrido vence)
+--------------------------------------------------------------------------------
+ - CPU (16 nucleos, 0,151 ms/bloco) e GPU (0,042 ms/bloco medida) trabalham
+   em fila dupla com top-up reativo; o controlador (EMA ou SA) equilibra a
+   fila pelas taxas medidas - convergencia SA ~0,44-0,47 de frac_cpu.
+ - Overhead do dispatcher (decisao + sync + base table) caiu de 3,5x para
+   1,31x com mega-lote; SA online continua encontrando o equilibrio sozinho.
+ - Sem taxas a priori, sem round-robin, sem filas estaticas: a resposta
+   medida decide tudo (banco de avaliacao), e o checksum bit-identico prova
+   que QUALQUER particao da solucao e indistinguivel da CPU pura.
+
+================================================================================
+ FONTES PRIMARIAS (todos os numeros acima tem JSON/saida crua):
+ comparacao_cupentbatch.json | comparacao_mega_lote.json | mega_lote/*.json
+ comparacao_hibrido_sp.json (3,46459e7, antes/depois) | resultados_servidor/
+ reproducao_exemplo/ (texto_comparacao.txt, tabela_comparativa_SOTA.md,
+ texto_comparacao_cuPentBatch.txt, tabela_comparativa_cuPentBatch.md)
+================================================================================

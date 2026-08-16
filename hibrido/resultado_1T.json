@@ -1,0 +1,10 @@
+{
+  "gpu": "NVIDIA RTX 5000 Ada Generation",
+  "tempo_medio_ms": 163.145,
+  "wall_total_s": 213.909,
+  "gflops": 182.129,
+  "checksum": 1.88944e+08,
+  "telemetria": {"temp_c": 69, "power_w": 167.384},
+  "blocos": {"total": 4064, "gpu": 2928, "cpu": 1136},
+  "contagem": {"iteracoes": 1000, "pontos_por_iter": 1061191680, "pontos_totais": 1061191680000, "sistemas_por_iter": 1040384, "sistemas_totais": 1040384000}
+}

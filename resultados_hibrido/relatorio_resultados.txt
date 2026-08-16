@@ -1,0 +1,201 @@
+================================================================================
+ RELATORIO DE RESULTADOS - DESPACHO HIBRIDO GPU+CPU (NPB SP pentadiagonal)
+ Controlador on-line por Simulated Annealing (SA) vs EMA adaptativo
+================================================================================
+ Data .........: 16/08/2026
+ Maquina ......: virtual22.prjsieh.lncc.br (LNCC) - Rocky Linux 9.6, kernel 5.14.0-570.32.1.el9_6
+ CPU ..........: AMD EPYC 9124 (Zen 4) - 16 cores / 32 threads, 1,5-3,71 GHz, L3 64 MiB
+ RAM ..........: 125 GiB (NUMA node 0)
+ GPU ..........: 2x NVIDIA RTX 5000 Ada Generation - 32 GB GDDR6, driver 580.65.06,
+                 TDP 250 W, sm_89 (experimentos no device 0)
+ CUDA .........: 13.0 (V13.0.48)
+ Recursos usados ........: 1 maquina (no unico) | 1 host (virtual22.prjsieh.lncc.br)
+                 1 socket EPYC 9124 (16 cores / 32 threads)
+                 2 GPUs RTX 5000 Ada instaladas / 1 usada (device 0) | 125 GiB RAM
+ Problema .....: varredura pentadiagonal real do NPB SP (n=1020)
+ Bloco ........: 256 linhas/bloco (1 thread/linha GPU; 1 worker/linha CPU)
+ Compilacao ...: nvcc -O3 -fmad=false
+ Metodologia ..: intercalado EMA/SA, best-of-3 interno x min-of-5 invocacoes
+ Validade .....: checksum bit-identico 3.46459e7 em 100% das execucoes
+================================================================================
+
+--------------------------------------------------------------------------------
+ TABELA 1 - RESULTADO PRINCIPAL: EMA vs SA (best-of-5 intercalado, REVALIDADO)
+ (2a campanha independente, 16/08; concordancia com a 1a: <=2%, SA 512: -6% termal)
+--------------------------------------------------------------------------------
+ blocos | linhas   | EMA [ms] | SA [ms] | split SA      | frac CPU | SA/EMA |
+--------|----------|----------|---------|---------------|----------|--------|
+ 64     |   16.384 |     6.66 |    6.59 | G42 / C22     |  0.405   |  99,0% |
+ 512    |  131.072 |    36.16 |   36.73 | G280 / C232   |  0.402   | 101,6% |
+ 1024   |  262.144 |    70.00 |   72.98 | G540 / C484   |  0.441   | 104,3% |
+--------|----------|----------|---------|---------------|----------|--------|
+ 1a campanha: 6.56/36.23/69.95 (EMA) e 6.59/39.07/73.49 (SA) -> CONFIRMADO.
+ Taxa sustentada: EMA 3,75M sistemas/s  |  SA 3,59M sistemas/s (n=1020)
+
+--------------------------------------------------------------------------------
+ TABELA 2 - PROVA DE CORRECAO (checksum bit-identico, 45 execucoes na 2a rodada)
+--------------------------------------------------------------------------------
+ Execucao            | blocos | tempo [ms] | checksum      | ok?
+---------------------|--------|------------|---------------|-----
+ all-GPU forcado     |   1024 |     127,12 | 3,46459000e+07 | SIM
+ all-CPU forcado     |   1024 |     147,63 | 3,46459000e+07 | SIM
+ frac 0.5 forcada    |   1024 |      71,20 | 3,46459000e+07 | SIM
+ EMA (2a campanha)   |   1024 |      70,00 | 3,46459000e+07 | SIM
+ SA  (2a campanha)   |   1024 |      72,98 | 3,46459000e+07 | SIM
+---------------------|--------|------------|---------------|-----
+ checksums por tamanho (todas as outras execucoes):
+   64 blocos -> 1,881050e+06   |   512 -> 1,611680e+07   |   1024 -> 3,46459e+07
+ (antes dos fixes: 1024 -> 1,44182e+07 = ERRADO, kernel com bugs)
+
+--------------------------------------------------------------------------------
+ TABELA 3 - BASELINES REAIS (forcados HSP_FIXED_FRAC, min-of-5)
+--------------------------------------------------------------------------------
+ Modo              | tempo [ms] | observacao
+-------------------|------------|-------------------------------------------
+ all-GPU           |     127,12 | 0,118 ms/bloco (GPU ~1,28x mais rapida)
+ all-CPU (16 nucle)|     147,63 | 0,151 ms/bloco
+ hibrido EMA       |      70,00 | ganho ~45% vs GPU-only; ~52% vs CPU-only
+ hibrido SA        |      72,98 | SA dentro de 4,3% do EMA
+-------------------|------------|-------------------------------------------
+ Nota: os valores antigos gck/ccck (97,10/72,86 ms) eram execucoes
+ AUTO-balanceadas (splits ~530/494) rotuladas por engano como puras -> INVALIDOS
+ como baseline. 97,10 ms era ruido termico do regime balanceado (~70-73 ms).
+
+--------------------------------------------------------------------------------
+ TABELA 4 - CONVERGENCIA DO CONTROLADOR SA
+--------------------------------------------------------------------------------
+ escala | frac_cpu inicial | frac_cpu final | blocos p/ convergir
+--------|------------------|----------------|---------------------
+ 64     |        ~0,54     |      0,405     |    ~30-45
+ 512    |        ~0,54     |      0,402     |    ~30-45
+ 1024   |        ~0,54     |      0,441     |    ~30-45
+--------|------------------|----------------|---------------------
+ Ponto de regime do makespan: frac_cpu ~0,40-0,44 (split balanceado).
+
+--------------------------------------------------------------------------------
+ TABELA 5 - SWEEP DE FRACAO FORCADA (1024 blocos, binario corrigido, min-of-2)
+ (os extremos forcados estao na tabela 3: all-GPU 127 ms / all-CPU 148 ms)
+--------------------------------------------------------------------------------
+ frac | tempo [ms] | split (G/C)
+------|------------|---------------
+ 0,10 |      86,91 | G512 / C512
+ 0,30 |      72,49 | G553 / C471
+ 0,50 |      71,33 | G544 / C480
+ 0,70 |      73,12 | G529 / C495
+ 0,90 |      71,91 | G542 / C482
+------|------------|---------------
+ Leitura: makespan PLANO em ~71-73 ms para frac 0,3-0,9 (o controle top-up
+ rebalanceia o split real para o equilibrio ~56/44); so os extremos forcados
+ (0 e 1) sobem (127/148 ms). O sweep ANTIGO (tabela antiga 96,5@0,05..69,6@0,85)
+ usava o binario com bug de frac>0.5 -> DESATUALIZADO.
+
+--------------------------------------------------------------------------------
+ TABELA 6 - PROJECAO PARA CLASSES DO NPB SP (fase pentadiagonal apenas)
+ (total de sistemas penta = 3 varreduras x N^2 linhas x iteracoes)
+--------------------------------------------------------------------------------
+ Classe | grid  | iters | sistemas penta | EMA proj. | SA proj.
+--------|-------|-------|----------------|-----------|----------
+   C    | 162^3 |  400  |   1,575e7      |   ~4,2 s  |  ~4,4 s
+   D    | 408^3 |  500  |   2,497e8      |  ~66,6 s  |  ~70,0 s
+   E    |1020^3 |  500  |   1,561e9      | ~416,5 s  | ~437,5 s
+--------|-------|-------|----------------|-----------|----------
+ Obs.: so as varreduras pentadiagonais (kernel dominante); nao inclui
+ transformacao do RHS, harmonizacao nem comunicacao MPI.
+
+--------------------------------------------------------------------------------
+ TABELA 7 - ESTADO DA ARTE (SP: numeros publicados vs este estudo)
+--------------------------------------------------------------------------------
+ Implementacao / maquina            | SP C completo [s] | fonte
+------------------------------------|-------------------|------------------
+ Fortran serial 1 core (E5-1660v2)  |       483,24      | DVM-System 2017
+ Xeon E5-1660v2 (6 cores)           |       122,25      | DVM-System 2017
+ Tesla C2070 (GPU)                  |       106,3       | DVM-System 2017
+ Tesla K40 (GPU)                    |        31,26      | DVM-System 2017
+ GTX Titan (GPU)                    |        29,3       | DVM-System 2017
+ NVIDIA Grace 72 cores (SP D)       |  136.893,59 Mops | NVIDIA ref. oficial
+ Este estudo (fase penta, proj.)    |        ~4,2       | projecao (1 GPU+16 c)
+------------------------------------|-------------------|------------------
+ OBS.: tempos publicados = benchmark COMPLETO; projecao = so fase penta.
+ Comparacao valida e por fase, nao por benchmark total.
+
+--------------------------------------------------------------------------------
+ RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+ 1. CORRECAO: o kernel + dispatcher corrigidos produzem checksum
+    bit-identico por tamanho (1,881050e6 / 1,611680e7 / 3,46459e7) em GPU,
+    CPU e todas as particoes (45 execucoes na 2a rodada) -> solucao correta
+    provada, sem erros de varredura nem linhas duplicadas.
+
+ 2. DESPACHO: controlador on-line por Simulated Annealing (sem profiling,
+    sem conhecimento previo das taxas) atinge 95-100% do EMA adaptativo
+    (que conhece as taxas), convergindo para frac_cpu ~0,44 em ~30-45 blocos,
+    sem oscilar. REVALIDADO em 2 campanhas independentes.
+
+ 3. GANHO HIBRIDO: GPU-only 127,12 ms e CPU-only 147,63 ms (forcados, min-of-5);
+    o hibrido (EMA 70,00 / SA 72,98 ms) ganha ~45-53% por sobreposicao pura.
+    O split de equilibrio (~56% GPU / 44% CPU) fecha com as taxas medidas
+    por bloco (0,118 vs 0,151 ms) - o despacho funciona como previsto.
+
+ 4. ESCALA CLASSE E (alvo NASA): fase pentadiagonal completa em ~416-438 s
+    num unico no (1 GPU Ada + 16 cores) - versus milhares de cores MPI da
+    NASA para o benchmark inteiro. Comparacao por fase, com ressalvas.
+
+================================================================================
+Arquivos de evidencia:
+  resultados_servidor/       84+45 JSONs (campanhas EMA/SA/sweep/checksum) + README
+  resultados_servidor/revalidacao/intercalado/  2a rodada: e*/s* 64-512-1024 (5 invoc.)
+  resultados_servidor/revalidacao/baselines/    2a rodada: g*/c* forcados + frac05
+  resultados_servidor/revalidacao/sweep2/       2a rodada: sweep frac 0.1-0.9 forcado
+  new/hlsp_fix_1024_final.json   (EMA 1a campanha, 69,95 ms)
+  new/hlsp_sa_1024_final.json    (SA 1a campanha, 73,49 ms)
+  comparacao_hibrido_sp.json     (JSON estruturado completo, revalidado)
+================================================================================
+--------------------------------------------------------------------------------
+ TABELA 8 - MEGA-LOTE (16/08/2026): 1 kernel+sync por MEGA=128 blocos (
+ em vez de 1 por BATCH=8). Decisao EMA/SA/top-up inalterada; so o
+ agendamento dos lancamentos GPU muda. Checksum bit-identico em TODOS.
+--------------------------------------------------------------------------------
+ Modo               | antes [ms] | mega-lote [ms] | variacao | split (G/C)
+ -------------------|------------|----------------|----------|------------
+ all-GPU forcado    |     127,12 |         47,302 |    -63%  | 1024 / 0
+ all-CPU forcado    |     147,63 |        147,870 |     0%   | 0 / 1024
+ frac 0.5 forcada   |      71,20 |         51,524 |    -28%  | 684 / 340
+ SA automatico (1a) |      72,98 |         42,436 |    -42%  | 745 / 279
+ SA automatico (2a) |      72,98 |         42,453 |    -42%  | 751 / 273
+ EMA automatico     |      70,00 |         47,116 |    -33%  | 712 / 312
+ -------------------|------------|----------------|----------|------------
+ Novos recordes: SA 42,4 ms = 6,18M linhas/systemas-1020 por segundo
+ GPU-only via dispatcher 47,3 ms vs kernel puro 36,2 ms (bench cuPentBatch)
+ -> overhead do dispatcher caiu de 3,5x para ~1,3x.
+ Bug corrigido no mega-lote v1: pending[] estourava (127+8=135 > MEGA)
+ -> cap to_gpu_cap = min(to_gpu_n, MEGA-npend).
+
+--------------------------------------------------------------------------------
+ TABELA 9 - REPRODUCAO DE cuPentBatch (Gloster et al., CPC 2019) na RTX 5000
+ Ada, mesmas condicoes (n=1020, doubles, min-of-5, janela termica)
+--------------------------------------------------------------------------------
+ Solver                      | 262.144 linhas       | 2048 | 16384 | 131072
+ ----------------------------|----------------------|------|-------|--------
+ nosso kernel (LU exata,     |  36,25 ms (kernel)   | 0,96 | 1,94  | 18,39
+  fatores em registrador)    |                      |      |       |
+ cuPentBatch pentFactorBatch |  40,24 ms            | 1,61 | 2,52  | 20,76
+ cuPentBatch pentSolveBatch  |  38,29 ms            | 1,07 | 2,29  | 21,30
+ (F+S) cuPentBatch            |  78,53 ms            | 2,68 | 4,81  | 42,06
+ ----------------------------|----------------------|------|-------|--------
+ speedup solve nosso/cpb     |  1,05x (cpb 0,95x)   | 0,90| 0,85  | 0,86
+ speedup total nosso/cpbF+S  |  2,17x (cpb 0,46x)   | 0,36| 0,40  | 0,44
+ Validacao: checksums IDENTICOS (7,63448874e+07), max |diff| = 1,1e-16,
+ residuo ||A x - b||inf: cpb 5,4e-16 | producao 4,4e-16 -> MESMO sistema exato.
+ DMA RHS 2,14 GB H2D = 86 ms > solve (36-38 ms): tudo-em-GPU e DMA-bound.
+ Conclusao: o layout interleaved do cuPentBatch nao paga no SP (n=1020)
+ porque ele rele os 5 arrays de fatoracao da DRAM a cada solve (10,7 GB);
+ nosso kernel pre-fatora 1x no CPU e le 5 vetores de 1020 doubles via
+ argumentos. Speedups do paper (2x vs gpsv, 5-6x vs OpenMP) sao em
+ Titan X Pascal com n ate 1e4 (regime latency-bound).
+ OBS. o kernel 'baseline' simplificado do exemplo (advanced_vs_baseline)
+ NAO resolve o sistema exato (residuo ~3,75 e max |diff| vs cpb = 1,04);
+ o kernel de PRODUCAO (solve_lines_kernel, LU banda completa) SI resolve
+ (residuo 4,4e-16). O checksum de referencia do projeto e da producao.
+ Arquivos: comparacao_cupentbatch.json, mega_lote/*.json, benches em
+ scripts/hibrido/bench_cupentbatch/.
+================================================================================

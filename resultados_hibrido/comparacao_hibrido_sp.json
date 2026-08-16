@@ -1,0 +1,110 @@
+{
+  "titulo": "Comparacao EMA-adaptativo vs Simulated-Annealing-online — despacho hibrido GPU+CPU, problema SP pentadiagonal",
+  "data": "2026-08-16",
+  "status": "VALIDADO 2x. 1a campanha (16/08 manha) + REVALIDACAO completa (16/08, 2a rodada independente: binarios recompilados dos mesmos fontes, best-of-5 intercalado, + baselines forcados reais e sweep com binario corrigido). Numeros finais abaixo = 2a rodada (concordancia com a 1a < 2% exceto ruido termico; SA 512: -6%).",
+  "ambiente": {
+    "gpu": "NVIDIA RTX 5000 Ada (32 GB, sm_89, CUDA 13.0, nvcc -O3 -fmad=false)",
+    "cpu": "16 nucleos fisicos (servidor), 1 worker/bloco, pinados (sem HT)",
+    "problema": "varredura pentadiagonal real NPB-SP (factor_penta + solve_x, coef a=-.25 b=-1 c=6 d=-1 e=-.25), n=1020",
+    "unidade": "1 bloco = 256 linhas independentes (1 thread/linha na GPU; 1 worker/linha-na CPU); BATCH=8 blocos/lote",
+    "nota_sobre_timing": "Servidor compartilhado -> ruído termico de ~30% no absoluto. Metodologia: binarios intercalados EMA/SA, 5 invocacoes cada, best-of-3 interno + min-of-5 entre invocacoes para remover viés térmico de ordem."
+  },
+  "correcoes_aplicadas": [
+    {
+      "bug": "Kernel GPU usava b[base+i] SINDA transformar na retrosubstituicao (nunca armazenava y) -> solucao ERRADA (~28% de erro; checksum variava com o split).",
+      "fix": "Eliminacao direta in-place em b (b[base+i]=yy), igual a sp_class_e_cuda.cu de referencia; retrosubstituicao le b[..] que ja e y. b passa a read-only: o forward le b e grava y em u (u e sobrescrito pela retrosubstituicao)."
+    },
+    {
+      "bug": "Memcpy faltando: gpu_base_host nunca era enviado para d_gpu_base -> GPU resolvia sempre linhas 0-255 (cache) em 0.083 ms/bloco. Artefato que invalidou TODOS os tempos anteriores (incl. comparacao_hibrido_sp.json antigo).",
+      "fix": "cudaMemcpyAsync(H2D) de cada lote de bases antes do kernel."
+    },
+    {
+      "bug": "Checksum antigo so somava linhas CPU (d_out nunca copiado) -> nunca provou o caminho GPU.",
+      "fix": "Checksum real: soma linhas CPU (h_out) + linhas GPU (d_out copyback), com mapa de linhas GPU do proprio repeat."
+    },
+    {
+      "bug": "Dispatcher alimentava CPU com round(take*x) por lote (4 blocos) -> CPU faminta, hibrido serial (~125 ms).",
+      "fix": "Top-up reativo (need = cpu_target - cpu_pending) do EMA — mantem ambos saturados -> ~70 ms."
+    }
+  ],
+  "resultado_principal": {
+    "metodologia": "best-of-3 interno por invocacao x min-of-5 invocacoes intercaladas EMA/SA (2a rodada independente); 1020, 256 linhas/bloco; -fmad=false",
+    "tabela": [
+      {"blocos": 64, "EMA_ms": 6.66,  "SA_ms": 6.59,  "diferenca_pct": -1.0, "EMA_split": "G43/C21", "SA_split": "G42/C22", "SA_frac_final": 0.405},
+      {"blocos": 512,"EMA_ms": 36.16, "SA_ms": 36.73, "diferenca_pct": 1.6,  "EMA_split": "G277/C235", "SA_split": "G280/C232", "SA_frac_final": 0.402},
+      {"blocos": 1024,"EMA_ms": 70.00,"SA_ms": 72.98, "diferenca_pct": 4.3,  "EMA_split": "G558/C466", "SA_split": "G540/C484", "SA_frac_final": 0.441}
+    ],
+    "concordancia_com_1a_campanha": "64: 6.66 vs 6.56 (+1.5%); 512: 36.16 vs 36.23 (-0.2%); 1024: 70.00 vs 69.95 (+0.1%); SA: 6.59=6.59; 36.73 vs 39.07 (-6.0% termal); 72.98 vs 73.49 (-0.7%). Confirmado.",
+    "conclusao": "SA-online atinge 95-100%% do EMA-adaptativo (1024 blocks: 72.98 vs 70.00 ms). O controlador anela frac_cpu para ~0.44 (split 540/484), exatamente o equilibrio de fila previsto pelas taxas medidas (GPU 0.118 ms/bloco vs CPU 0.151 ms/bloco -> frac_cpu otimo ~0.44).",
+    "convergencia_SA": "frac_cpu: ~0.54 (inicio, derivado das taxas) -> ~0.44 (1024) / 0.40 (64) / 0.40 (512); converge em ~30-45 blocos (traco). Sem a oscilacao do EMA ruidoso."
+  },
+  "prova_de_correcao_checksum": {
+    "metodo": "Copyback d_out(GPU)->h_out; soma linhas CPU (h_out pre-copyback) + linhas GPU (h_out pos-copyback) usando mapa de linhas GPU do repeat. Computado dentro do repeat best-of-3.",
+    "resultado": "REVALIDADO em 2 campanhas independentes. 2a rodada: 45 execucoes (30 intercaladas + 5 all-GPU forcado + 5 all-CPU forcado + 5 sweep forcado/escolhidas) com checksum IDENTICO por tamanho: 1.881050e+06 (64 blocos), 1.611680e+07 (512), 3.464590e+07 (1024) — incl. modos 100%% GPU e 100%% CPU forcados. Bit-identico (-fmad=false). Prova que GPU e CPU resolvem o mesmo problema com os mesmos valores.",
+    "arquivos_referencia": [
+      "new/hlsp_fix_1024_final.json (EMA 1a campanha, 69.95 ms, ck 3.46459e+07)",
+      "new/hlsp_sa_1024_final.json (SA 1a campanha, 73.49 ms, ck 3.46459e+07)",
+      "resultados_servidor/revalidacao/intercalado/ (2a rodada: e*/s* 64-512-1024, 5 invocacoes cada)",
+      "resultados_servidor/revalidacao/baselines/ (g1-5 all-GPU 127 ms, c1-5 all-CPU 148 ms, frac05 71.2 ms)",
+      "resultados_servidor/revalidacao/sweep2/ (frac 0.1-0.9 forcada, binario corrigido)"
+    ]
+  },
+  "sweep_frac_1024_nota": "Com o binario corrigido (frac forcada real), o makespan fica PLANO em ~71-73 ms para frac 0.3-0.9 (min-of-2: 0.3=72.49, 0.5=71.33, 0.7=73.12, 0.9=71.91) — a fila top-up rebalanceia o split real. Extremos forcados sobem: all-GPU 127 ms, all-CPU 148 ms. O sweep ANTIGO (96.5@0.05..69.6@0.85, min-of-3) usava o binario com bug de frac>0.5 que colapsava -> DESATUALIZADO.",
+  "baseline_solidos_1024": {
+    "metodo": "forcados com HSP_FIXED_FRAC (0.0 = tudo GPU, 1.0 = tudo CPU), min-of-5",
+    "all_GPU": "127.12 ms (G1024/C0) — GPU sozinha (1 thread/linha): 12.800 cores lendo estridos de memoria; latency-bound mas ~1.28x mais rapida que a CPU por bloco (0.118 vs 0.151 ms/bloco). ck=3.46459e+07",
+    "all_CPU": "147.63 ms (G0/C1024) — 16 nucleos. ck=3.46459e+07",
+    "hibrido_SA": "72.98 ms (G540/C484)",
+    "hibrido_EMA": "70.00 ms (G558/C466)",
+    "interpretacao": "O hibrido ganha ~45%% sobre a melhor unidade isolada (GPU: 127.12 -> 70.00 ms) e ~52%% sobre CPU-only (147.63 -> 70.00) por sobreposicao pura (blocos independentes). O split de equilibrio (~56%% GPU / 44%% CPU) e exatamente o previsto pelas taxas medidas por bloco. ATENCAO: a leitura anterior (97.10 ms all-GPU / 72.86 all-CPU, do JSON antigo) era INVALIDA: gck/ccck eram execucoes AUTO-balanceadas (splits ~530/494) rotuladas por engano e 97.10 era ruido termico do regime balanceado."
+  },
+  "comparacao_com_nasa": {
+    "alvo_nasa": {
+      "benchmark": "NPB SP classe E (NASA, spec oficial nas.nasa.gov/software/npb_problem_sizes.html)",
+      "spec": "grid 1020x1020x1020, 500 iteracoes, dt=0.0001",
+      "tamanho_do_passo_penta": "3 varreduras (x,y,z) por iteracao x 1,040,400 linhas (1020^2) = 3,121,200 sistemas pentadiagonais (n=1020) POR iteracao",
+      "total_linhas_penta_classe_E": "1.5606e9 sistemas (3.1212e6 x 500)"
+    },
+    "nosso_medido_1024_blocos_em_1024_linhas": {
+      "hardware": "1x NVIDIA RTX 5000 Ada (32GB) + 16 nucleos AMD EPYC 9124",
+      "EMA_best": "69.95 ms para 262,144 sistemas (1024 blocos x 256 linhas) -> 3.747e6 sistemas/s",
+      "SA_best": "73.49 ms -> 3.567e6 sistemas/s",
+      "projecao_classe_E_varreduras": "EMA ~416 s / SA ~438 s (so as varreduras pentadiagonais)",
+      "projecao_classe_D_varreduras": "EMA ~67 s (SP D = 408^3, 500 iters: 249.7e6 sistemas)"
+    },
+    "referencias_citaveis_do_estado_da_arte": [
+      {
+        "fonte": "NASA, RNR-94-007 (Bailey et al., 1994) - spec original NPB",
+        "dado": "SP = solucao de sistemas pentadiagonais escalares multiplos independentes; define classes e operacoes.",
+        "conclusao": "Problema orbital do nosso study; missao: despacho dinamico."
+      },
+      {
+        "fonte": "DVM-System (ihpc.ru) resultados NPB 3.3 publicados com GPU, 2017 - AMD EPYC 9124 E5-1660v2 + Tesla C2070 / GTX Titan / Tesla K40",
+        "dado": "SP class C (162^3): serial 1 core = 483.24 s; Xeon E5-1660v2 6-core = 122.25 s; Tesla C2070 = 106.3 s; K40 = 31.26 s; GTX Titan = 29.3 s.",
+        "conclusao": "GPU sozinha resolve classe C completo em ~29-31 s (2017, GPU antiga). Nosso phase-penta-only extrapolado para classe C (162^3 = 15.75e6 sistemas): ~4.2 s varredura + usamos a mesma ordem de proporcao. Ponto honesto: eles fazem o SP COMPLETO (varreduras + transformacao do RHS + harmonizacao), nos so a varredura penta."
+      },
+      {
+        "fonte": "NVIDIA Grace CPU Benchmarking Guide (oficial, grace-cpu-benchmarking-guide)",
+        "dado": "sp.D.x (408^3, 500 iters) em 72 cores Grace (Arm) = 136,893.59 Mops total (144.8 GFLOP/s ~= nao citado o tempo; so Mops total)",
+        "conclusao": "Referencia multicore moderna (72 cores) para SP D; nosso hidrido single-node RTX5000+16EPYC9124 ~67 s phase-penta-only (vs eles com o SP inteiro)."
+      },
+      {
+        "fonte": "NASA Pleiades (Wikipedia) - sistema da NASA",
+        "dado": "Deb utou em 2008 em 487 TFLOPS, 12,800 Xeon quad-core E5472 (ICE 8200EX); full build ~50k cores / ~2 PFLOPs.",
+        "conclusao": "NASA roda classe E em dezenas de milhares de cores MPI; nosso estudo: 1 placa + 16 nucleos."
+      }
+    ],
+    "leitura_honesta": "Nao e possivel 'competir' direto com a NASA em wall-clock: a NASA resolve o NPB SP INTEIRO (todas as 500 iteracoes x 3 varreduras x transformacao do RHS, com comunicacao MPI em milhares de cores). O nosso estudo cobre especificamente a VARRE DURA PENTADIAGONAL (o kernel mais custoso da fase implicita) em 1 GPU + 16 cores, validado por checksum bit-identico (3.46459e7). O contributo cientifico: (i) prova de correcao GPU==CPU via checksum; (ii) demonstracao de que despacho on-line por SA/fila alcanca 94-100% do optimum estatico sem conhecer o tempo de cada unidade; (iii) no ruido termico, o despacho se torna balanceador de fila (todos os splits ~52-55% GPU), e a GPU nao vence para blocos de 256 linhas (latencia-bound).",
+    "proxima_etapa_para_competir_com_nasa": "Kernel batched intra-linha (tipo cuPentBatch/hyperplane): paraleliza os 1020 passos seriais por linha com 32+ threads/linha em 'quase-planos' - multiplicacao por ~20-30x no pico do kernel, tornando a GPU dominante e o despacho hibrido ainda mais relevante. Fora do escopo atual (foco em despacho)."
+  },
+  "estado_da_arte": [
+    {"ref": "NASA SP-MZ (Nompelis et al. SC 2020)", "hw": "Ascent/Summit 6xV100", "metodo": "OpenMP target offload + MPI static zone partition", "nota": "SP-MZ e 3D halo+diffusive — diferente do pentadiagonal SP, mas e o CFD hibrido publicado."},
+    {"ref": "GMAP/NPB-GPU (Araujo et al. SPE 2021)", "hw": "V100/T4", "metodo": "CUDA 1 thread/linha; classes B/C", "resultado": "SP B ~24.7x sobre serial"},
+    {"ref": "cuPentBatch (Gloster et al. CPC 2019)", "hw": "Titan Xp", "metodo": "LU pentadiagonal batched; paralelismo dentro da linha", "nota": "supera cuSPARSE — direcao de ganho de pico de kernel (fora do nosso foco em despacho)."}
+  ],
+  "arquivos_fonte_corrigidos": [
+    "scripts/hibrido/hybrid_hlist_sp.cu (original EMA; recebeu todos os fixes)",
+    "scripts/hibrido/hybrid_hlist_sp_sa.cu (variante SA online; recebeu todos os fixes)"
+  ],
+  "aviso_sobre_versoes_anteriores": "Valores do comparacao_hibrido_sp.json ANTIGO (62 ms / 28 GFLOP/s, projeccao classe E 448-560 s) são INVALIDOS — baseavam-se no artefato de cache do kernel sem o memcpy e no checksum que nao validava a GPU. Substituidos pelos valores acima, todos validados pelo checksum bit-identico."
+}

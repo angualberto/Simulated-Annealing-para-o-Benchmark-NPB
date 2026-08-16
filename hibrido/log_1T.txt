@@ -1,0 +1,61 @@
+====================================================================
+  NPB SP PENTADIAGONAL HIBRIDO + TELEMETRIA NVML (NVIDIA RTX 5000 Ada Generation)
+  Malha: 1040384 linhas (1061191680 pontos/iter) | 1000 iteracoes | Trava Termica: 84 C
+  Total previsto: 1.061e+12 pontos | 1.040e+09 sistemas lineares (n=1020)
+====================================================================
+[Iter    1/1000] t=189.4 ms | ck=188943960.480809 | GPU=52C 20.9W | G2897/C1167 | ETA 5984s
+[Iter    2/1000] t=166.2 ms | ck=- | GPU=52C 60.3W | G2924/C1140 | ETA 3072s
+[Iter    3/1000] t=158.6 ms | ck=- | GPU=52C 60.3W | G2975/C1089 | ETA 2099s
+[Iter    4/1000] t=147.5 ms | ck=- | GPU=52C 60.3W | G3042/C1022 | ETA 1609s
+[Iter    5/1000] t=169.8 ms | ck=- | GPU=52C 60.3W | G2888/C1176 | ETA 1320s
+[Iter    6/1000] t=159.7 ms | ck=- | GPU=54C 86.0W | G2960/C1104 | ETA 1126s
+[Iter    7/1000] t=160.2 ms | ck=- | GPU=54C 86.0W | G2956/C1108 | ETA 987s
+[Iter    8/1000] t=146.8 ms | ck=- | GPU=54C 86.0W | G3052/C1012 | ETA 881s
+[Iter    9/1000] t=149.3 ms | ck=- | GPU=55C 150.2W | G3035/C1029 | ETA 798s
+[Iter   10/1000] t=134.5 ms | ck=- | GPU=55C 150.2W | G3140/C924 | ETA 731s
+[Iter   25/1000] t=176.5 ms | ck=- | GPU=56C 152.3W | G2838/C1226 | ETA 380s
+[Iter   50/1000] t=156.3 ms | ck=- | GPU=57C 154.7W | G2984/C1080 | ETA 257s
+[Iter   75/1000] t=189.9 ms | ck=- | GPU=58C 155.2W | G2748/C1316 | ETA 217s
+[Iter  100/1000] t=156.7 ms | ck=188943960.480760 | GPU=60C 153.1W | G2984/C1080 | ETA 235s
+[Iter  125/1000] t=178.3 ms | ck=- | GPU=61C 151.9W | G2832/C1232 | ETA 213s
+[Iter  150/1000] t=154.2 ms | ck=- | GPU=62C 141.6W | G2997/C1067 | ETA 196s
+[Iter  175/1000] t=176.5 ms | ck=- | GPU=64C 175.2W | G2848/C1216 | ETA 181s
+[Iter  200/1000] t=164.9 ms | ck=188943960.480806 | GPU=64C 152.7W | G2950/C1114 | ETA 187s
+[Iter  225/1000] t=171.8 ms | ck=- | GPU=65C 161.8W | G2873/C1191 | ETA 174s
+[Iter  250/1000] t=169.8 ms | ck=- | GPU=65C 161.1W | G2895/C1169 | ETA 163s
+[Iter  275/1000] t=172.1 ms | ck=- | GPU=67C 163.5W | G2873/C1191 | ETA 154s
+[Iter  300/1000] t=158.7 ms | ck=188943960.480758 | GPU=68C 166.9W | G2968/C1096 | ETA 156s
+[Iter  325/1000] t=137.0 ms | ck=- | GPU=68C 163.0W | G3120/C944 | ETA 147s
+[Iter  350/1000] t=174.8 ms | ck=- | GPU=68C 170.4W | G2858/C1206 | ETA 139s
+[Iter  375/1000] t=163.3 ms | ck=- | GPU=68C 156.4W | G2937/C1127 | ETA 131s
+[Iter  400/1000] t=161.6 ms | ck=188943960.480743 | GPU=69C 158.6W | G2947/C1117 | ETA 131s
+[Iter  425/1000] t=164.6 ms | ck=- | GPU=69C 156.8W | G2925/C1139 | ETA 124s
+[Iter  450/1000] t=163.6 ms | ck=- | GPU=69C 152.5W | G2933/C1131 | ETA 117s
+[Iter  475/1000] t=150.3 ms | ck=- | GPU=68C 148.5W | G3027/C1037 | ETA 111s
+[Iter  500/1000] t=142.3 ms | ck=188943960.480766 | GPU=69C 153.3W | G3080/C984 | ETA 109s
+[Iter  525/1000] t=173.0 ms | ck=- | GPU=68C 157.7W | G2868/C1196 | ETA 102s
+[Iter  550/1000] t=174.4 ms | ck=- | GPU=69C 156.2W | G2856/C1208 | ETA 96s
+[Iter  575/1000] t=174.7 ms | ck=- | GPU=69C 160.4W | G2855/C1209 | ETA 90s
+[Iter  600/1000] t=169.7 ms | ck=188943960.480813 | GPU=70C 160.3W | G2894/C1170 | ETA 87s
+[Iter  625/1000] t=156.2 ms | ck=- | GPU=69C 151.8W | G2984/C1080 | ETA 80s
+[Iter  650/1000] t=174.0 ms | ck=- | GPU=69C 155.1W | G2864/C1200 | ETA 74s
+[Iter  675/1000] t=160.4 ms | ck=- | GPU=69C 156.2W | G2962/C1102 | ETA 69s
+[Iter  700/1000] t=168.4 ms | ck=188943960.480796 | GPU=70C 165.5W | G2900/C1164 | ETA 65s
+[Iter  725/1000] t=163.8 ms | ck=- | GPU=68C 161.5W | G2928/C1136 | ETA 59s
+[Iter  750/1000] t=161.5 ms | ck=- | GPU=69C 154.0W | G2947/C1117 | ETA 53s
+[Iter  775/1000] t=158.8 ms | ck=- | GPU=70C 155.8W | G2968/C1096 | ETA 47s
+[Iter  800/1000] t=164.8 ms | ck=188943960.480778 | GPU=70C 163.6W | G2928/C1136 | ETA 43s
+[Iter  825/1000] t=130.5 ms | ck=- | GPU=69C 158.4W | G3170/C894 | ETA 37s
+[Iter  850/1000] t=176.5 ms | ck=- | GPU=69C 158.2W | G2847/C1217 | ETA 32s
+[Iter  875/1000] t=162.1 ms | ck=- | GPU=70C 163.6W | G2944/C1120 | ETA 26s
+[Iter  900/1000] t=168.4 ms | ck=188943960.480782 | GPU=70C 150.6W | G2904/C1160 | ETA 21s
+[Iter  925/1000] t=151.6 ms | ck=- | GPU=69C 167.6W | G3017/C1047 | ETA 16s
+[Iter  950/1000] t=167.9 ms | ck=- | GPU=69C 159.3W | G2901/C1163 | ETA 11s
+[Iter  975/1000] t=168.2 ms | ck=- | GPU=69C 149.4W | G2899/C1165 | ETA 5s
+[Iter 1000/1000] t=165.2 ms | ck=188943960.480778 | GPU=69C 167.4W | G2928/C1136 | ETA 0s
+
+=== RESULTADO CONSOLIDADO ===
+Pontos totais resolvidos: 1.061e+12 (marca 1,06e12 ATINGIDA)
+Tempo medio/iteracao: 163.145 ms | Wall total: 213.9 s | Vazao: 4.961e+09 pontos/s
+Vazao: 182.13 GFLOPS (estimado 28 flops/ponto) | Checksum: 1.88943960e+08
+Telemetria Final: Temperatura = 69 C | Consumo = 167.4 W
