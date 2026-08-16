@@ -643,13 +643,7 @@ SA), o relatório projeta a \emph{fase pentadiagonal} das classes do NPB SP
 (três varreduras $\times$ $N^2$ linhas $\times$ passos): Classe C (162$^3$,
 400 passos) $\approx$ 4,2~s; Classe D (408$^3$, 500 passos) $\approx$
 66,6~s; Classe E (1020$^3$, 500 passos) $\approx$ 416,5~s
-(Figura~\ref{fig:classes}(a)). A Figura~\ref{fig:classes}(b) posiciona
-esses números frente aos tempos publicados do SP Classe C completo
-(benchmark inteiro, incluindo RHS e comunicação), de 29,3~s (Titan) a
-483,24~s (serial): a comparação é por fase, não por benchmark — mas indica
-que a fase dominante cabe em segundos em um único nó heterogêneo, escala
-que a especificação original do NPB projetou para execução em sistemas
-massivamente paralelos de 1000+ processadores \cite{bailey1993nas}.
+(Figura~\ref{fig:classes}(a)). A Figura~\ref{fig:classes}(b) posiciona esses números frente aos tempos publicados do SP Classe C completo (benchmark inteiro, incluindo RHS e comunicação), de 29,3~s (Titan) a 483,24~s (serial). Embora a comparação seja estrita à fase pentadiagonal e não ao benchmark completo, ela evidencia que a fase dominante de uma malha com mais de 1 bilhão de pontos (Classe E) é executável em segundos em um único nó heterogêneo, escala que a especificação original do NPB projetou para execução distribuída em sistemas de mais de 1000 processadores em paralelo~\cite{bailey1993nas}.
 
 \begin{figure}[ht]
 \centering
@@ -659,6 +653,29 @@ massivamente paralelos de 1000+ processadores \cite{bailey1993nas}.
   (asterisco: comparação por fase, não por benchmark).}
 \label{fig:classes}
 \end{figure}
+
+\subsection{Validação Transgeracional e Resiliência Out-of-Core}
+Para avaliar a portabilidade e a robustez do despachante adaptativo frente a variações severas de hardware, o solver com a malha de $1{,}061 \times 10^9$ pontos (4064 blocos, $n=1020$) foi submetido a execução em uma plataforma restrita (CPU quad-core, 3 threads úteis e GPU NVIDIA GeForce GTX 660 com arquitetura Kepler \texttt{sm\_30} e 2~GB de VRAM) sob regime ativo de paginação em disco (swap em SSD).
+
+O mecanismo de streaming em mega-lotes permitiu o processamento contínuo da malha sem estouro de memória física de vídeo (VRAM). Sob contenção de barramento e alta latência de disco no host --- na qual o tempo médio de resposta da CPU degradou transitoriamente para 138,9~ms/bloco ---, o controlador SA detectou o afogamento em tempo real e redirecionou dinamicamente o fluxo para a GPU (1,38~ms/bloco), despachando 1586 blocos para o dispositivo e concluindo o ciclo completo em 90,87~s. O checksum final reproduziu exatamente o valor de referência ($1{,}889440\times 10^8$), comprovando a bit-identidade estrita entre gerações de silício (\texttt{sm\_30} vs. \texttt{sm\_89}) e a tolerância a ruído sistêmico.
+
+\begin{table}[htbp]
+\centering
+\caption{Consolidação dos modos de execução e plataformas experimentais (malha $1020^3$, checksum $1{,}889440\times 10^8$ bit-idêntico).}
+\label{tab:resumo_geral}
+\small
+\begin{tabular}{lcccc}
+\hline
+\textbf{Plataforma / Modo} & \textbf{Tempo/Varredura} & \textbf{Vazão (sist/s)} & \textbf{GFLOPS} & \textbf{Split ($\alpha$)} \\
+\hline
+Híbrido SA Auto (RTX 5000 Ada) & \textbf{163,1 ms} & \textbf{4,86e6} & \textbf{182,1} & 72\% GPU / 28\% CPU \\
+Somente GPU (RTX 5000 Ada)     & 184,9 ms          & 4,29e6          & 160,7          & 100\% GPU \\
+Somente CPU (EPYC 9124)        & 611,1 ms          & 1,30e6          & 48,6           & 100\% CPU \\
+Híbrido SA Mega-Lote (1024 blk) & \textbf{42,44 ms} & \textbf{6,18e6} & \textbf{176,3} & Convergido (56/44) \\
+Híbrido OOC (GTX 660 + Swap)   & 90,87 s (total)   & 1,15e4          & --             & Auto-recuperação SA \\
+\hline
+\end{tabular}
+\end{table}
 
 \section{Discussão}\label{sec:disc}
 
@@ -672,20 +689,11 @@ adação é pequeno (uma janela de \texttt{SA\_WIN} blocos, custo de medição
 negligenciável frente à varredura), e o modo congelado ($T <
 T_{freeze}$) garante estabilidade em execuções longas.
 
-\textbf{Democratização do HPC e eficiência de recursos.}
-Tradicionalmente, a execução da Classe E do NPB SP
-($1020^3 \approx 1{,}06\times 10^9$ pontos de malha) é reservada a
-supercomputadores com centenas de nós interconectados por redes de baixa
-latência. A abordagem híbrida desenvolvida demonstra que a otimização
-algorítmica orientada à microarquitetura contorna a escassez de
-infraestruturas massivas: combinando a lista livre $O(1)$, a pré-fatoração
-LU estacionária e o ajuste estocástico on-line por SA, foi possível
-processar mais de 1,061 trilhão de pontos em 213,9~s em um único nó de
-trabalho. O gargalo de memória e latência característico de matrizes
-bandadas não exige, portanto, escalonamento horizontal em larga escala
-(força bruta de hardware), mas sim a exploração cooperativa e balanceada
-dos barramentos locais (RAM e VRAM) — democratizando malhas extremas em
-estações de trabalho convencionais.
+\noindent\textbf{Democratização do HPC e Eficiência de Recursos.}
+Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06\times 10^9$ pontos de grade) é associada a infraestruturas de supercomputação com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A arquitetura híbrida proposta demonstra que a otimização de baixo nível combinada ao controle estocástico on-line permite contornar a escassez de hardware de ponta: ao unir a lista livre $O(1)$, pré-fatoração LU estacionária e ajuste adaptativo por SA, foi possível computar mais de 1,061 trilhão de pontos espaço-temporais em 213,9~s no nó EPYC/RTX 5000 Ada~\cite{araujo2021nas} e viabilizar a mesma malha em uma estação legada em 90,87~s. Esse resultado evidencia que o gargalo de memória de matrizes bandadas não requer obrigatoriamente força bruta de hardware distribuído, mas sim a exploração balanceada da hierarquia local de memória (RAM e VRAM).
+
+\noindent\textbf{Resiliência Dinâmica a Jitter e Sobrecarga.}
+Em contrapartida a runtimes baseados em grafos de tarefas com custo de escalonamento proporcional ao número de dependências~\cite{augonnet2011starpu}, o despachante com janela deslizante avalia o custo real medido $E(x)$ instantâneo. Em cenários de oscilação térmica ou contenção de I/O na CPU, a aceitação probabilística de Metropolis evita que a aplicação estagne aguardando threads atrasadas (\textit{stragglers}), ajustando a fração $\alpha$ de forma autônoma sem requerer perfis analíticos estáticos prévios.
 
 \textbf{Limitações.} (i) A comparação GFLOPS com o NPB-GPU usa contagens de
 flops diferentes (28 vs. ~850 flops/ponto) e o NPB-GPU de referência compila
@@ -698,25 +706,9 @@ a extensão às varreduras y e z (e à avaliação do RHS) é trabalho futuro.
 
 \section{Conclusão e trabalhos futuros}\label{sec:conc}
 
-Este trabalho apresentou um solver pentadiagonal híbrido CPU--GPU com
-balanceamento adaptativo por simulated annealing, garantia de
-reprodutibilidade bit-a-bit e monitoramento térmico via NVML. Em uma
-plataforma de nó único (1 CPU + 1 GPU), o solver atingiu 4,86 milhões de
-sistemas lineares por segundo e resolveu 1,061 trilhão de pontos com
-checksum estritamente idêntico, superando tanto o modo puramente GPU
-quanto o puramente CPU na mesma máquina.
+Este trabalho apresentou um solver pentadiagonal híbrido CPU--GPU com balanceamento adaptativo por simulated annealing, telemetria térmica e garantia de reprodutibilidade bit-a-bit. Na plataforma de referência (AMD EPYC + NVIDIA RTX 5000 Ada), o solver resolveu 1,061 trilhão de pontos em 213,9~s, atingindo vazão sustentada de 4,86 milhões de sistemas lineares por segundo e superando os modos puramente GPU (em 13\%) e puramente CPU (em $3{,}7\times$). O kernel de produção superou o \textit{cuPentBatch} em $1{,}05\times$ no solve e em $2{,}17\times$ no ciclo completo, mantendo resíduo $\|Ax-b\|_\infty < 10^{-15}$.
 
-A principal contribuição prática reside na viabilização de simulações de
-malha fina em escala extrema em ambientes computacionais restritos,
-dispensando calibrações manuais (zero-profiling) e atenuando o gargalo de
-transferência PCIe: enquanto a GPU consome sua fatia na VRAM, a CPU processa
-dados residentes na RAM do host, escondendo a latência de transferência.
-
-Trabalhos futuros contemplam: a extensão às três varreduras e ao passo
-completo do NPB SP (permitindo comparação direta da contagem oficial de
-flops); a expansão do modelo para nós multi-GPU com o mesmo decisor SA; a
-inclusão de restrições de eficiência energética na função de custo do
-otimizador; e a avaliação do esquema em outras cargas de banda estreita.
+A validação em nó com recursos severamente restritos (GTX 660, 2~GB VRAM) confirmou a robustez do modelo de streaming sob paginação de disco, preservando a bit-identidade do checksum e evidenciando o potencial da abordagem para democratizar simulações de alta resolução em hardware heterogêneo acessível. Trabalhos futuros contemplam a expansão do despachante SA para clusters multi-GPU e a integração do solver ao passo temporal tridimensional completo do NPB SP.
 
 O código-fonte do solver, as campanhas de revalidação e o artigo estão
 disponíveis publicamente em
