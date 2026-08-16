@@ -12,9 +12,9 @@
 \newfloat{algoritmo}{htp}{loa}
 \floatname{algoritmo}{Algoritmo}
 
-\titlespacing*{\section}{0pt}{0.5ex}{0.3ex}
-\titlespacing*{\subsection}{0pt}{0.5ex}{0.3ex}
-\linespread{0.83}
+\titlespacing*{\section}{0pt}{0.2ex}{-0.3ex}
+\titlespacing*{\subsection}{0pt}{0.2ex}{-0.3ex}
+\linespread{0.78}
 
 \sloppy
 
@@ -220,7 +220,7 @@ arredondamento entre os dois caminhos.
 \caption{\texttt{solve\_lines\_kernel}: resolução de um lote de linhas
   pentadiagonais na GPU (um thread por linha).}
 \label{alg:kernel}
-\footnotesize
+\scriptsize
 \begin{algorithmic}[1]
 \State \textbf{Entrada:} índices base $B$, coeficientes $(a,b,c,d,e)$,
         RHS $f$; \textbf{Saída:} solução $u$
@@ -269,7 +269,7 @@ concorrentemente.
 \caption{Varredura híbrida completa — thread \emph{dispatcher} (esquerda)
   e threads de CPU (direita), executados concorrentemente.}
 \label{alg:sweep}
-\footnotesize
+\scriptsize
 \begin{algorithmic}[1]
 \State \textbf{Entrada:} lista \emph{livre}, fração $x$, coeficientes;
         \textbf{Saída:} contadores $gpu\_blocks$, $cpu\_done$
@@ -300,7 +300,7 @@ concorrentemente.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.40\textwidth]{figs/fig_arquitetura.png}
+\includegraphics[width=.35\textwidth]{figs/fig_arquitetura.png}
 \caption{Arquitetura do solver híbrido: dispatcher com decisor SA, integração Out-of-Core com Memória Swap, pool de
   threads CPU (EPYC 9124), mega-lotes de kernels GPU e telemetria NVML.}
 \label{fig:arquitetura}
@@ -363,7 +363,7 @@ Algoritmo~\ref{alg:sa} formaliza o ciclo de decisão usado a cada janela.
   (executado pelo \emph{dispatcher} a cada janela de \texttt{SA\_WIN}
   blocos).}
 \label{alg:sa}
-\footnotesize
+\scriptsize
 \begin{algorithmic}[1]
 \State \textbf{Entrada:} estado corrente ($E_{prev}$, $x_{prev}$), melhor
         ($E_{best}$, $x_{best}$), temperatura $T$, custo medido $E(x')$
@@ -466,7 +466,7 @@ GPU cresce até o patamar de ~70~°C, 14~°C abaixo da trava térmica.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.40\textwidth]{figs/fig_telemetria.png}
+\includegraphics[width=.35\textwidth]{figs/fig_telemetria.png}
 \caption{Evolução do run de 1000 iterações: tempo por varredura e
   temperatura da GPU (RTX 5000 Ada).}
 \label{fig:telemetria}
@@ -500,7 +500,7 @@ Somente CPU & 611,1 ms & 48,6 & 100\% CPU \\
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.40\textwidth]{figs/fig_modos.png}
+\includegraphics[width=.35\textwidth]{figs/fig_modos.png}
 \caption{Tempo por varredura e vazão dos três modos de execução.}
 \label{fig:modos}
 \end{figure}
@@ -595,7 +595,7 @@ tem vale largo.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.45\textwidth]{figs/fig_campanhas.png}
+\includegraphics[width=.40\textwidth]{figs/fig_campanhas.png}
 \caption{(a) Campanha EMA vs.\ SA por escala; (b) varredura de fração
   forçada em 1024 blocos (linha tracejada: SA automático).}
 \label{fig:campanhas}
@@ -644,7 +644,7 @@ considerado.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.45\textwidth]{figs/fig_megabatch.png}
+\includegraphics[width=.40\textwidth]{figs/fig_megabatch.png}
 \caption{(a) Mega-lote vs.\ BATCH=8 por modo; (b) kernel de produção vs.\
   cuPentBatch em 262.144 linhas (n=1020).}
 \label{fig:megabatch}
@@ -657,7 +657,7 @@ Para consolidar os ganhos de desempenho, realizou-se uma campanha comparativa su
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.50\textwidth]{figs/fig_5metodos.png}
+\includegraphics[width=.45\textwidth]{figs/fig_5metodos.png}
 \caption{Tempo mínimo por varredura dos cinco métodos de balanceamento avaliados no mega-lote.}
 \label{fig:5metodos}
 \end{figure}
@@ -677,7 +677,7 @@ SA), o relatório projeta a \emph{fase pentadiagonal} das classes do NPB SP
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.45\textwidth]{figs/fig_classes.png}
+\includegraphics[width=.40\textwidth]{figs/fig_classes.png}
 \caption{(a) Projeção da fase pentadiagonal para as classes C/D/E;
   (b) estado da arte publicado do SP C completo vs.\ projeção da fase penta
   (asterisco: comparação por fase, não por benchmark).}
@@ -725,28 +725,55 @@ T_{freeze}$) garante estabilidade em execuções longas.
 Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06 \times 10^9$ pontos de malha) é reservada a supercomputadores com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A abordagem híbrida desenvolvida demonstra que a otimização algorítmica orientada à microarquitetura contorna a escassez de infraestruturas massivas: combinando a lista livre $O(1)$, a pré-fatoração LU estacionária e o ajuste estocástico on-line por SA, foi possível processar mais de 1,061 trilhão de pontos em 213,9~s em um único nó de trabalho. O gargalo de memória e latência característico de matrizes bandadas não exige, portanto, escalonamento horizontal em larga escala (força bruta de hardware), mas sim a exploração cooperativa e balanceada dos barramentos locais (RAM e VRAM) em estações de trabalho convencionais.
 
 \subsection{Resiliência Out-of-Core e Varreduras Tridimensionais ($X, Y, Z$)}
-A robustez do despachante adaptativo e do mecanismo \textit{Edge Transpose} foi avaliada na malha tridimensional completa da Classe E ($1020^3 \approx 1{,}06\times 10^9$ pontos, demandando $\sim$16,8~GB) em ambiente de estresse extremo: CPU AMD FX-6300 (3 núcleos ativos, 15~GiB RAM) e GPU legada NVIDIA GeForce GTX 660 (2~GB VRAM, arquitetura Kepler \texttt{sm\_30}) paginando em swap SSD de 32~GiB.
+Para estressar os limites da arquitetura, a malha da Classe E ($1020^3 \approx 1{,}06\times 10^9$ pontos, $\sim$16,8~GB) foi executada em uma estação de trabalho legada (AMD FX-6300, 3 núcleos físicos ativos, 15~GiB de RAM física e GPU NVIDIA GeForce GTX 660 de 2~GB VRAM / \texttt{sm\_30}) com arquivo de swap SSD de 32~GiB.
+
+\noindent\textbf{Filtragem de Ruído de Paginação (EMA vs. SA).}
+Sob regime de paginação ativa, a leitura dispersa de páginas virtuais causa bloqueios intermitentes de I/O na CPU. Como reportado na Tabela~\ref{tab:ooc_ema_sa}, o controlador reativo por Média Móvel Exponencial (EMA) acumulou o ruído de cauda longa, inflando a latência média da CPU para 266,89~ms/bloco e distorcendo a fração de trabalho. Em contrapartida, o decisor estocástico SA filtrou os picos transitórios na janela de energia ($W=16$), convergindo a latência estável para 138,97~ms/bloco e concluindo a varredura $X$ em 90,87~s com checksum $1{,}889440\times 10^8$ rigorosamente bit-idêntico.
 
 \begin{table}[htbp]
 \centering
-\caption{Desempenho Out-of-Core e comportamento do SA nas três direções espaciais (malha $1020^3$, 4064 blocos, GTX 660 2~GB sob swap SSD).}
-\label{tab:3d_ooc}
-\footnotesize
-\begin{tabular}{lcccc}
+\caption{Comparativo de resiliência a ruído de I/O em swap SSD (GTX 660 2~GB, 4064 blocos, $n=1020$).}
+\label{tab:ooc_ema_sa}
+\scriptsize
+\begin{tabular}{lcc}
 \hline
-\textbf{Eixo Espacial} & \textbf{Padrão de Acesso} & \textbf{Tempo Total (s)} & \textbf{Split ($\alpha$)} & \textbf{Checksum Bit-a-Bit} \\
+\textbf{Métrica de Execução} & \textbf{Baseline (EMA)} & \textbf{Proposto (SA)} \\
 \hline
-Eixo $X$ (Nativo)      & Contíguo                  & \textbf{90,87}           & 39\% GPU / 61\% CPU       & $1{,}889440\times 10^8$ \\
-Eixo $Y$ (Transposto)  & Stride $N$ ($8{,}16$~kB)  & \textbf{91,98}           & 42\% GPU / 58\% CPU       & $1{,}889440\times 10^8$ \\
-Eixo $Z$ (Transposto)  & Stride $N^2$ ($8{,}32$~MB)& \textbf{212,43}          & 21\% GPU / 79\% CPU       & $1{,}889440\times 10^8$ \\
+Carga atribuída à GPU & 1489 blocos (36,6\%) & \textbf{1586 blocos (39,0\%)} \\
+Carga atribuída à CPU & 2575 blocos (63,4\%) & \textbf{2478 blocos (61,0\%)} \\
+Ruído medido na CPU (\textit{page faults}) & 266,889 ms/bloco & \textbf{138,969 ms/bloco} \\
+Latência medida na GPU & 1,1025 ms/bloco & 1,3818 ms/bloco \\
+Tempo total da varredura & 94,12 s & \textbf{90,87 s} \\
+Checksum de validação & $1{,}889440\times 10^8$ & $1{,}889440\times 10^8$ (Bit-idêntico) \\
 \hline
 \end{tabular}
 \end{table}
 \vspace{-4mm}
 
-Na comparação direta com o controlador por Média Móvel Exponencial (EMA) no eixo $X$, o EMA sofreu com picos estocásticos de paginação do disco, reportando ruído de 266,89~ms/bloco na CPU e tempo total de 94,12~s. O otimizador SA filtrou o ruído de I/O em sua janela de energia ($W=16$), estabilizando a latência em 138,97~ms/bloco e reduzindo a varredura para 90,87~s. 
+\noindent\textbf{Varreduras $Y$ e $Z$ com \textit{Edge Transpose}.}
+Para transpor a memória não-contígua nos eixos $Y$ (salto de $N \approx 8{,}16$~kB) e $Z$ (salto de $N^2 \approx 8{,}32$~MB), as threads do pool de host linearizaram os blocos em micro-buffers contíguos de 16~MB antes do streaming assíncrono para a GPU. Os resultados para os três eixos constam na Tabela~\ref{tab:3d_ooc}.
 
-Para os eixos multidimensionais (Tabela~\ref{tab:3d_ooc}), o \textit{Edge Transpose} permitiu ao eixo $Y$ atingir tempo equivalente ao nativo ($91{,}98\text{ s}$ vs. $90{,}87\text{ s}$). No eixo $Z$, sob forte contenção da controladora SSD pelo salto de $N^2$, o controlador SA detectou em tempo real a asfixia de I/O no despachante e ajustou autonomamente o split para 79\% CPU / 21\% GPU, concluindo a varredura em 212,43~s com checksum rigorosamente bit-idêntico.
+\begin{table}[htbp]
+\centering
+\caption{Desempenho Out-of-Core nas três direções espaciais (malha $1020^3$, 4064 blocos, GTX 660 2~GB sob swap SSD).}
+\label{tab:3d_ooc}
+\scriptsize
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Eixo} & \textbf{Acesso} & \textbf{Stride} & \textbf{Banda SSD} & \textbf{GFLOPS} & \textbf{Split ($\alpha$)} & \textbf{Tempo (s)} \\
+\hline
+$X$ (Nativo)      & Contíguo   & Unitário & 186,6 MB/s & 0,327 & 39\% GPU / 61\% CPU & \textbf{90,87} \\
+$Y$ (Transposto)  & Descont.   & $N$      & 184,4 MB/s & 0,323 & 42\% GPU / 58\% CPU & \textbf{91,98} \\
+$Z$ (Transposto)  & Descont.   & $N^2$    & 79,8 MB/s  & 0,140 & 21\% GPU / 79\% CPU & \textbf{212,43} \\
+\hline
+\end{tabular}
+\end{table}
+\vspace{-4mm}
+
+O empacotamento paralelo via OpenMP permitiu que o eixo $Y$ operasse com taxa equivalente ao eixo $X$ (91,98~s vs. 90,87~s, atingindo $\sim$184~MB/s de vazão de disco). No eixo $Z$, o salto severo de 8~MB por ponto saturou a taxa de I/O do SSD para 79,8~MB/s; nesse cenário, o decisor SA detectou o afogamento de barramento e deslocou 79\% da carga de resolução para os workers de CPU, mantendo o pipeline ativo e concluindo a malha tridimensional completa em 212,43~s.
+
+\noindent\textbf{Adaptação Autônoma a Acessos Descontínuos ($X, Y, Z$).}
+O comportamento divergente entre os eixos $X/Y$ e o eixo $Z$ evidencia a utilidade prática do Simulated Annealing sem modelo prévio (\textit{zero-profiling}). Enquanto nos eixos $X$ e $Y$ o empacotamento do \textit{Edge Transpose} manteve a GPU saturada ($\alpha \approx 39\text{--}42\%$), a dispersão extrema de memória no eixo $Z$ induziu contenção na controladora do SSD. Em sistemas estáticos, essa desaceleração forçaria a GPU a aguardar transferências lentas por DMA; o controlador SA, contudo, capturou o atraso relativo e priorizou a computação nos núcleos de CPU locais, provando que a meta-heurística reage tanto a variações térmicas de processamento quanto a gargalos físicos de subsistemas de armazenamento e memória virtual.
 
 \noindent\textbf{Limitações e Validação.}
 (i) A comparação de GFLOPS com o NPB-GPU usa contagens de flops distintas (28 vs. 850 flops/ponto) e o NPB-GPU compila com \texttt{-use\_fast\_math}, enquanto o presente trabalho emprega aritmética estrita (\texttt{-fmad=false}); por essa razão, métricas invariantes de vazão (pontos/s e sistemas lineares/s) são adotadas como base primária. (ii) A margem de 13\% sobre o modo somente-GPU é dependente do equilíbrio térmico e do barramento da máquina avaliada; o ganho arquitetural estrutural é a redução frente ao modo somente-CPU ($3{,}7\times$). (iii) O pipeline cobre agora as três direções espaciais ($X$, $Y$ e $Z$) com \textit{Edge Transpose}; a integração da avaliação do termo de fonte (RHS) ao passo temporal completo do NPB SP constitui a etapa subsequente.
