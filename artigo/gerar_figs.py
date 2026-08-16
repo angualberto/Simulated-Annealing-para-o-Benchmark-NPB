@@ -127,6 +127,11 @@ arrow(5.9, 3.1, 6.7, 3.1)
 # CPU -> saída e GPU -> saída (cotovelos pelo corredor entre decisor e GPU)
 elbow(6.7, 4.6, 6.2, 1.7)
 elbow(6.7, 2.6, 6.45, 1.7)
+
+# SA (1-to-N) controla a Telemetria e a Saída também
+dashed_arrow(4.7, 3.0, 4.7, 1.7) # decisor -> saida
+dashed_arrow(5.9, 3.0, 6.7, 1.5) # decisor -> telemetria
+
 # GPU -> telemetria (vertical no centro)
 arrow(8.15, 2.4, 8.15, 1.8)
 fig.savefig(OUT + "fig_arquitetura.png", dpi=300)
