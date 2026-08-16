@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 
 plt.rcParams.update({"font.family": "serif", "font.size": 11})
-OUT = "scripts/artigo/figs/"
+OUT = "figs/"
 
 # ---------------- Figura 1: modos de execucao ----------------
 modos = ["Híbrido\n(SA auto)", "GPU\n(frac=0)", "CPU\n(frac=1)"]
@@ -38,7 +38,7 @@ plt.close(fig)
 
 # ---------------- Figura 2: evolucao do run (log_1T.txt) ----------------
 iters, ts, temps = [], [], []
-for line in open("scripts/hibrido/log_1T.txt", encoding="utf-8"):
+for line in open("../hibrido/log_1T.txt", encoding="utf-8"):
     m = re.search(r"\[Iter\s+(\d+)/1000\] t=([\d.]+) ms.*GPU=(\d+)C", line)
     if m:
         iters.append(int(m.group(1))); ts.append(float(m.group(2))); temps.append(int(m.group(3)))
@@ -119,3 +119,52 @@ fig.savefig(OUT + "fig_arquitetura.png", dpi=300)
 plt.close(fig)
 
 print("Figuras geradas:", "OK")
+
+# ---------------- Figura 4: Comparativo 5 Metodos (Mega-lote) ----------------
+import csv
+csv_path = "../hibrido/comparativo_megalote_5metodos.csv"
+try:
+    metodos = []
+    tempos = []
+    with open(csv_path, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            metodo = row["metodo"]
+            # Shorten names for the plot
+            if "Somente-GPU" in metodo: name = "GPU\n(100%)"
+            elif "Somente-CPU" in metodo: name = "CPU\n(100%)"
+            elif "Estatico" in metodo: name = "Estático\n(50/50)"
+            elif "Reativo" in metodo: name = "EMA\n(Reativo)"
+            elif "SA" in metodo: name = "SA\n(Proposto)"
+            else: name = metodo
+            metodos.append(name)
+            tempos.append(float(row["tempo_min_ms"]))
+            
+    fig, ax = plt.subplots(figsize=(7.2, 3.5), constrained_layout=True)
+    
+    cores_5 = []
+    for m in metodos:
+        if "SA" in m: cores_5.append("#bb8c2c")  # Destaque dourado
+        elif "GPU" in m: cores_5.append("#2c6fbb") # Azul
+        elif "CPU" in m: cores_5.append("#bb2c2c") # Vermelho
+        else: cores_5.append("#777777") # Cinza
+        
+    b5 = ax.bar(metodos, tempos, color=cores_5, width=0.6)
+    for b, v in zip(b5, tempos):
+        ax.text(b.get_x() + b.get_width()/2, v + 2, f"{v:.2f} ms", ha="center", fontsize=9.5, fontweight="bold" if v < 40 else "normal")
+        
+    ax.set_ylabel("Tempo mínimo por varredura (ms)")
+    ax.set_ylim(0, max(tempos) * 1.15)
+    ax.set_title("Desempenho dos Métodos de Balanceamento no Mega-lote (Menor é Melhor)", fontsize=10.5)
+    ax.grid(axis="y", alpha=0.3)
+    
+    # Custom legend
+    import matplotlib.patches as mpatches
+    sa_patch = mpatches.Patch(color='#bb8c2c', label='SA Adaptativo (Mais rápido)')
+    ax.legend(handles=[sa_patch], loc='upper left')
+
+    fig.savefig(OUT + "fig_5metodos.png", dpi=300)
+    plt.close(fig)
+    print("Figura 5 métodos gerada: OK")
+except Exception as e:
+    print(f"Não foi possível gerar fig_5metodos.png: {e}")

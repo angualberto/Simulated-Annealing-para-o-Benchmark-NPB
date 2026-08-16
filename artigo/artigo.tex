@@ -622,6 +622,19 @@ considerado.
 \label{fig:megabatch}
 \end{figure}
 
+\subsection{Comparativo Final dos 5 Métodos de Balanceamento no Mega-lote}\label{sec:5metodos}
+
+Para consolidar os ganhos de desempenho, realizou-se uma campanha comparativa submetendo a malha de 1024 blocos aos cinco modos de escalonamento implementados (Figura~\ref{fig:5metodos}). O checksum numérico manteve-se estritamente idêntico em todos os cinco regimes.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=.75\textwidth]{figs/fig_5metodos.png}
+\caption{Tempo mínimo por varredura dos cinco métodos de balanceamento avaliados no mega-lote.}
+\label{fig:5metodos}
+\end{figure}
+
+O modo puramente em CPU ($147,64$~ms) estabelece o tempo base do processador, evidenciando a distância arquitetural. O particionamento Estático 50/50 ($51,52$~ms) mostra-se subótimo, amarrando a GPU para esperar a CPU. A execução Somente-GPU atinge $46,81$~ms, definindo o teto de desempenho do hardware gráfico isolado. O escalonamento Reativo por Taxa (EMA) atinge um bom tempo ($44,92$~ms), mas sofre de miopia local em otimizações gulosas. Por fim, o \textbf{SA Adaptativo proposto} não apenas escapa de vales subótimos (graças à aceitação de Metropolis), como encontra o ponto dinâmico de balanceamento (ex.: $789$ blocos para GPU e $235$ para CPU), atingindo o recorde da plataforma de \textbf{$35,89$~ms}. Este resultado comprova a premissa de que cooperar com a CPU mascara o gargalo do barramento e eleva a vazão global para cerca de \textbf{7,30 milhões de sistemas resolvidos por segundo}.
+
 \subsection{Projeção para as classes do NPB SP e estado da arte}
 \label{sec:classes}
 

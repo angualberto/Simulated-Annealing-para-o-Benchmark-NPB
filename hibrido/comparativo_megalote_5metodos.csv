@@ -1,0 +1,6 @@
+metodo,frac_forcada,tempo_min_ms,tempo_medio_ms,blocos_gpu,blocos_cpu,checksum_ok
+Somente-GPU (100% GPU),0.0,46.8133,47.29,0,0,SIM
+Somente-CPU (100% CPU),1.0,147.576,147.64,0,0,SIM
+Estatico Balanceado (50/50),0.5,51.5193,51.61,0,0,SIM
+Reativo por Taxa (EMA),0.42,44.917,45.05,0,0,SIM
+SA Adaptativo (Proposto),-1.0,35.8865,41.37,0,0,SIM
