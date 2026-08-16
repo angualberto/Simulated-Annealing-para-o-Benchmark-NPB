@@ -633,9 +633,10 @@ SA), o relatório projeta a \emph{fase pentadiagonal} das classes do NPB SP
 (Figura~\ref{fig:classes}(a)). A Figura~\ref{fig:classes}(b) posiciona
 esses números frente aos tempos publicados do SP Classe C completo
 (benchmark inteiro, incluindo RHS e comunicação), de 29,3~s (Titan) a
-483,24~s (serial): a comparação é por fase, não por benchmark — mas mostra
-que a fase dominante cabe em segundos em um único nó, onde a NASA usa
-milhares de núcleos MPI.
+483,24~s (serial): a comparação é por fase, não por benchmark — mas indica
+que a fase dominante cabe em segundos em um único nó heterogêneo, escala
+que a especificação original do NPB projetou para execução em sistemas
+massivamente paralelos de 1000+ processadores \cite{bailey1993nas}.
 
 \begin{figure}[ht]
 \centering
@@ -703,6 +704,10 @@ completo do NPB SP (permitindo comparação direta da contagem oficial de
 flops); a expansão do modelo para nós multi-GPU com o mesmo decisor SA; a
 inclusão de restrições de eficiência energética na função de custo do
 otimizador; e a avaliação do esquema em outras cargas de banda estreita.
+
+O código-fonte do solver, as campanhas de revalidação e o artigo estão
+disponíveis publicamente em
+\url{https://github.com/angualberto/Simulated-Annealing-para-o-Benchmark-NPB}.
 
 \bibliographystyle{sbc}
 \bibliography{artigo}
