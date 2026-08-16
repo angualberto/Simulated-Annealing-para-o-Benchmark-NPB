@@ -90,6 +90,10 @@ def elbow(x1, y1, xv, y2):
     seg(x1, y1, xv, y1)
     arrow(xv, y1, xv, y2)
 
+def double_arrow_dashed(x1, y1, x2, y2):
+    ax.add_patch(FancyArrowPatch((x1, y1), (x2, y2), arrowstyle="<|-|>",
+                 mutation_scale=14, lw=1.2, color="#bb2c2c", linestyle="--"))
+
 boxes = {
     "swap":    (0.3, 5.8, 2.4, 0.6, "Memória Swap (SSD)\nOut-of-Core Dinâmico", "#fcf8e3", "#bb8c2c"),
     "malha":   (0.3, 4.4, 2.4, 1.1, "Malha NPB SP\n1.061e12 pontos/iteração\n1.040.384 linhas (n=1020)", "#fdf3e3", "#bb8c2c"),
@@ -103,8 +107,8 @@ boxes = {
 for b in boxes.values():
     box(*b)
 
-# fluxo swap -> malha e malha -> livre
-arrow(1.5, boxes["swap"][1], 1.5, boxes["malha"][1] + boxes["malha"][3])
+# fluxo malha <-> swap (overflow) e malha -> livre
+double_arrow_dashed(1.5, boxes["malha"][1] + boxes["malha"][3], 1.5, boxes["swap"][1])
 arrow(1.5, boxes["malha"][1], 1.5, boxes["livre"][1] + boxes["livre"][3])
 # malha -> decisor e livre -> decisor (horizontais, entram na borda esquerda)
 arrow(2.7, 4.95, 3.5, 4.95)
