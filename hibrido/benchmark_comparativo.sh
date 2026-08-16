@@ -63,8 +63,8 @@ executar_teste() {
         fi
 
         tempos+=("$t_ms")
-        if (( $(echo "$temp_c > $temp_max" | bc -l) )); then temp_max=$temp_c; fi
-        if (( $(echo "$pwr_w > $pwr_max" | bc -l) )); then pwr_max=$pwr_w; fi
+        if [ "$temp_c" -gt "$temp_max" ]; then temp_max=$temp_c; fi
+        if awk -v a="$pwr_w" -v b="$pwr_max" 'BEGIN{exit !(a>b)}'; then pwr_max=$pwr_w; fi
 
         if [ -z "$checksum_ref" ]; then
             checksum_ref="$chk"
@@ -81,7 +81,8 @@ executar_teste() {
     sum_t=$(printf "%s\n" "${tempos[@]}" | awk '{s+=$1} END {printf "%.2f", s/NR}')
 
     # GFLOPS (28 flops/ponto; mesma formula do solver)
-    gflops=$(echo "scale=2; ($total * 28) / ($min_t * 1000000)" | bc)
+    gflops=$(TOTAL=$total MIN_T=$min_t python3 -c 'import os
+print("%.2f" % ((int(os.environ["TOTAL"]) * 28.0) / (float(os.environ["MIN_T"]) * 1e6)))')
 
     printf "%s,%s,%s,%s,%s,%s,%s,%s\n" \
            "$nome_metodo" "$frac_env" "$min_t" "$sum_t" "$gflops" "$temp_max" "$pwr_max" "$chk_ok" >> "$CSV_OUT"
