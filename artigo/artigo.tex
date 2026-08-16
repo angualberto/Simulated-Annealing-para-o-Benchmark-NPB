@@ -14,13 +14,16 @@
 \newfloat{algoritmo}{htp}{loa}
 \floatname{algoritmo}{Algoritmo}
 
-\linespread{0.89}
+\linespread{0.88}
 
 \sloppy
 
-\setlength{\textfloatsep}{2pt plus 1pt minus 2pt}
-\setlength{\floatsep}{2pt plus 1pt minus 1pt}
-\setlength{\intextsep}{2pt plus 1pt minus 1pt}
+\usepackage{caption}
+\captionsetup{font=scriptsize}
+
+\setlength{\textfloatsep}{8pt plus 1pt minus 2pt}
+\setlength{\floatsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{6pt plus 1pt minus 1pt}
 
 \setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
 \setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
@@ -239,7 +242,6 @@ arredondamento entre os dois caminhos.
 \State \Return $x$
 \end{algorithmic}
 \end{algoritmo}
-\vspace{-4mm}
 
 Neste trabalho a malha é representada como \texttt{nb} blocos de
 \texttt{lines\_per\_block}=256 linhas consecutivas de $n$=1020 pontos. Cada
@@ -294,7 +296,6 @@ concorrentemente.
 \State lança o \emph{mega-lote} residual e sincroniza
 \end{algorithmic}
 \end{algoritmo}
-\vspace{-4mm}
 
 \vspace{-0.6em}
 
@@ -305,7 +306,6 @@ concorrentemente.
   threads CPU (EPYC 9124), mega-lotes de kernels GPU e telemetria NVML.}
 \label{fig:arquitetura}
 \end{figure}
-\vspace{-4mm}
 
 Os coeficientes do sistema (cinco diagonais) são copiados uma única vez
 para a GPU (\texttt{d\_l1}--\texttt{d\_u2}); apenas o vetor de termos
@@ -380,7 +380,6 @@ Algoritmo~\ref{alg:sa} formaliza o ciclo de decisão usado a cada janela.
 \State \Return $x_{j+1}$
 \end{algorithmic}
 \end{algoritmo}
-\vspace{-4mm}
 
 O custo \eqref{eq:custo} é medido em tempo real sobre a própria execução,
 capturando estados transientes da máquina (throttling térmico, carga da CPU);
@@ -458,7 +457,6 @@ Split convergido pelo SA & 72\% GPU / 28\% CPU \\
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 A Figura~\ref{fig:telemetria} mostra a evolução do run: o tempo por
 iteração estabiliza em 160--170~ms após o warm-up do SA, e a temperatura da
@@ -504,7 +502,6 @@ Somente CPU & 611,1 ms & 48,6 & 100\% CPU \\
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 
 
@@ -542,7 +539,6 @@ C (162$^3$, 400 passos) & 7,23 s & 200,5 \\
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 Ambas as classes passaram na verificação oficial de resíduos do NPB. A
 contagem NAS inclui a avaliação do RHS e as três varreduras por passo
@@ -578,7 +574,6 @@ Figura~\ref{fig:campanhas}(a) mostram os tempos por escala.
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 O SA, que não recebe nenhuma informação \emph{a priori} sobre as taxas da
 máquina, permanece dentro de 1--4\% do EMA em todas as escalas — os 4,3\%
@@ -638,7 +633,6 @@ SA automático     & 72,98 & \textbf{42,44} & $-42\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 Na comparação de kernel puro (Figura~\ref{fig:megabatch}(b)), o kernel de
 produção (fatores pré-fatorados uma única vez e mantidos em registradores)
@@ -711,7 +705,6 @@ Híbrido OOC (GTX 660 + Swap)   & 90,87 s (total)   & 1,15e4          & --      
 \hline
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 \section{Discussão}\label{sec:disc}
 
@@ -752,7 +745,6 @@ Checksum de validação & $1{,}889440\times 10^8$ & $1{,}889440\times 10^8$ (Bit
 \hline
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 \noindent\textbf{Varreduras $Y$ e $Z$ com \textit{Edge Transpose}.}
 Para transpor a memória não-contígua nos eixos $Y$ (salto de $N \approx 8{,}16$~kB) e $Z$ (salto de $N^2 \approx 8{,}32$~MB), as threads do pool de host linearizaram os blocos em micro-buffers contíguos de 16~MB antes do streaming assíncrono para a GPU. Os resultados para os três eixos constam na Tabela~\ref{tab:3d_ooc}.
@@ -772,7 +764,6 @@ $Z$ (Transposto)  & Descont.   & $N^2$    & 79,8 MB/s  & 0,140 & 21\% GPU / 79\%
 \hline
 \end{tabular}
 \end{table}
-\vspace{-4mm}
 
 O empacotamento paralelo via OpenMP permitiu que o eixo $Y$ operasse com taxa equivalente ao eixo $X$ (91,98~s vs. 90,87~s, atingindo $\sim$184~MB/s de vazão de disco). No eixo $Z$, o salto severo de 8~MB por ponto saturou a taxa de I/O do SSD para 79,8~MB/s; nesse cenário, o decisor SA detectou o afogamento de barramento e deslocou 79\% da carga de resolução para os workers de CPU, mantendo o pipeline ativo e concluindo a malha tridimensional completa em 212,43~s.
 
