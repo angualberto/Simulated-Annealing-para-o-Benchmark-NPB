@@ -90,6 +90,10 @@ def elbow(x1, y1, xv, y2):
     seg(x1, y1, xv, y1)
     arrow(xv, y1, xv, y2)
 
+def dashed_arrow(x1, y1, x2, y2):
+    ax.add_patch(FancyArrowPatch((x1, y1), (x2, y2), arrowstyle="-|>",
+                 mutation_scale=14, lw=1.1, color="#3f7d3f", linestyle="--"))
+
 boxes = {
     "swap":    (0.3, 5.8, 2.4, 0.6, "Memória Swap (SSD)\nOut-of-Core Dinâmico", "#fcf8e3", "#bb8c2c"),
     "malha":   (0.3, 4.4, 2.4, 1.1, "Malha NPB SP\n1.061e12 pontos/iteração\n1.040.384 linhas (n=1020)", "#fdf3e3", "#bb8c2c"),
@@ -109,6 +113,10 @@ arrow(1.7, boxes["swap"][1], 1.7, boxes["malha"][1] + boxes["malha"][3]) # swap 
 
 # malha -> livre
 arrow(1.5, boxes["malha"][1], 1.5, boxes["livre"][1] + boxes["livre"][3])
+
+# decisor <-> swap (controle de OOC streaming)
+dashed_arrow(3.5, 5.2, 2.7, 5.9) # decisor -> swap
+dashed_arrow(2.7, 6.1, 3.5, 5.4) # swap -> decisor
 
 # malha -> decisor e livre -> decisor (horizontais, entram na borda esquerda)
 arrow(2.7, 4.95, 3.5, 4.95)
