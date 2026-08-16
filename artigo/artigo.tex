@@ -14,6 +14,10 @@
 
 \sloppy
 
+\setlength{\textfloatsep}{8pt plus 1pt minus 2pt}
+\setlength{\floatsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{6pt plus 1pt minus 1pt}
+
 \setlength{\abovedisplayskip}{5pt plus 2pt minus 2pt}
 \setlength{\belowdisplayskip}{5pt plus 2pt minus 2pt}
 \setlength{\abovedisplayshortskip}{3pt plus 1pt minus 1pt}
@@ -288,7 +292,7 @@ concorrentemente.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.50\textwidth]{figs/fig_arquitetura.png}
+\includegraphics[width=.45\textwidth]{figs/fig_arquitetura.png}
 \caption{Arquitetura do solver híbrido: dispatcher com decisor SA, pool de
   threads CPU (EPYC 9124), mega-lotes de kernels GPU e telemetria NVML.}
 \label{fig:arquitetura}
@@ -445,7 +449,7 @@ GPU cresce até o patamar de ~70~°C, 14~°C abaixo da trava térmica.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.52\textwidth]{figs/fig_telemetria.png}
+\includegraphics[width=.45\textwidth]{figs/fig_telemetria.png}
 \caption{Evolução do run de 1000 iterações: tempo por varredura e
   temperatura da GPU (RTX 5000 Ada).}
 \label{fig:telemetria}
@@ -477,7 +481,7 @@ Somente CPU & 611,1 ms & 48,6 & 100\% CPU \\
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.54\textwidth]{figs/fig_modos.png}
+\includegraphics[width=.45\textwidth]{figs/fig_modos.png}
 \caption{Tempo por varredura e vazão dos três modos de execução.}
 \label{fig:modos}
 \end{figure}
@@ -569,7 +573,7 @@ tem vale largo.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.58\textwidth]{figs/fig_campanhas.png}
+\includegraphics[width=.50\textwidth]{figs/fig_campanhas.png}
 \caption{(a) Campanha EMA vs.\ SA por escala; (b) varredura de fração
   forçada em 1024 blocos (linha tracejada: SA automático).}
 \label{fig:campanhas}
@@ -616,7 +620,7 @@ considerado.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.58\textwidth]{figs/fig_megabatch.png}
+\includegraphics[width=.50\textwidth]{figs/fig_megabatch.png}
 \caption{(a) Mega-lote vs.\ BATCH=8 por modo; (b) kernel de produção vs.\
   cuPentBatch em 262.144 linhas (n=1020).}
 \label{fig:megabatch}
@@ -628,7 +632,7 @@ Para consolidar os ganhos de desempenho, realizou-se uma campanha comparativa su
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.75\textwidth]{figs/fig_5metodos.png}
+\includegraphics[width=.55\textwidth]{figs/fig_5metodos.png}
 \caption{Tempo mínimo por varredura dos cinco métodos de balanceamento avaliados no mega-lote.}
 \label{fig:5metodos}
 \end{figure}
@@ -647,7 +651,7 @@ SA), o relatório projeta a \emph{fase pentadiagonal} das classes do NPB SP
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=.58\textwidth]{figs/fig_classes.png}
+\includegraphics[width=.50\textwidth]{figs/fig_classes.png}
 \caption{(a) Projeção da fase pentadiagonal para as classes C/D/E;
   (b) estado da arte publicado do SP C completo vs.\ projeção da fase penta
   (asterisco: comparação por fase, não por benchmark).}
@@ -690,10 +694,31 @@ negligenciável frente à varredura), e o modo congelado ($T <
 T_{freeze}$) garante estabilidade em execuções longas.
 
 \noindent\textbf{Democratização do HPC e Eficiência de Recursos.}
-Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06\times 10^9$ pontos de grade) é associada a infraestruturas de supercomputação com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A arquitetura híbrida proposta demonstra que a otimização de baixo nível combinada ao controle estocástico on-line permite contornar a escassez de hardware de ponta: ao unir a lista livre $O(1)$, pré-fatoração LU estacionária e ajuste adaptativo por SA, foi possível computar mais de 1,061 trilhão de pontos espaço-temporais em 213,9~s no nó EPYC/RTX 5000 Ada~\cite{araujo2021nas} e viabilizar a mesma malha em uma estação legada em 90,87~s. Esse resultado evidencia que o gargalo de memória de matrizes bandadas não requer obrigatoriamente força bruta de hardware distribuído, mas sim a exploração balanceada da hierarquia local de memória (RAM e VRAM).
+Tradicionalmente, a execução da Classe E do NPB SP ($1020^3 \approx 1{,}06 \times 10^9$ pontos de malha) é reservada a supercomputadores com centenas de nós interconectados por redes de baixa latência~\cite{bailey1993nas}. A abordagem híbrida desenvolvida demonstra que a otimização algorítmica orientada à microarquitetura contorna a escassez de infraestruturas massivas: combinando a lista livre $O(1)$, a pré-fatoração LU estacionária e o ajuste estocástico on-line por SA, foi possível processar mais de 1,061 trilhão de pontos em 213,9~s em um único nó de trabalho. O gargalo de memória e latência característico de matrizes bandadas não exige, portanto, escalonamento horizontal em larga escala (força bruta de hardware), mas sim a exploração cooperativa e balanceada dos barramentos locais (RAM e VRAM) em estações de trabalho convencionais.
 
-\noindent\textbf{Resiliência Dinâmica a Jitter e Sobrecarga.}
-Em contrapartida a runtimes baseados em grafos de tarefas com custo de escalonamento proporcional ao número de dependências~\cite{augonnet2011starpu}, o despachante com janela deslizante avalia o custo real medido $E(x)$ instantâneo. Em cenários de oscilação térmica ou contenção de I/O na CPU, a aceitação probabilística de Metropolis evita que a aplicação estagne aguardando threads atrasadas (\textit{stragglers}), ajustando a fração $\alpha$ de forma autônoma sem requerer perfis analíticos estáticos prévios.
+\noindent\textbf{Resiliência em Hardware Restrito e Execução Out-of-Core.}
+Para comprovar a robustez arquitetural do agendador, a malha completa da Classe E (1,06 bilhão de pontos, exigindo $\sim$16,8~GB) foi submetida a um ambiente de extremo gargalo estrutural: uma GPU legada NVIDIA GTX 660 (Kepler, \texttt{sm\_30}) com apenas 2~GB de VRAM nativa e um host sob paginação pesada em disco (swap em SSD de 32~GB).
+
+A restrição impedia alocações diretas (\texttt{cudaMalloc}), ocasionando falhas instantâneas de memória. A arquitetura operou em regime Out-of-Core dinâmico: o dispatcher funcionou como motor de streaming assíncrono, transferindo blocos particionados da RAM para micro-buffers de $\sim$16~MB na VRAM, executando o kernel GPU e devolvendo o resultado via \texttt{cudaMemcpyAsync}.
+
+O teste produziu checksum bit-idêntico ($1{,}889440\times 10^8$), validando a integridade numérica. O comportamento autônomo do SA foi decisivo: a leitura contínua do Swap elevou a latência média da CPU para 138,9~ms por bloco (contra $\sim$1,7~ms em memória física livre). Imediatamente, o controlador SA detectou a degradação na janela de custo $E(x)$ da CPU e, ao constatar que as chamadas de GPU via streaming PCIe mantinham 1,38~ms por bloco, migrou de forma reativa a maior parte do processamento para a placa de vídeo.
+
+Enquanto a execução in-core no cluster EPYC leva $\sim$214~ms por varredura, o desktop legado concluiu a iteração em 90,87~s (Tabela~\ref{tab:ooc_comparativo}). A conclusão central não é o déficit temporal do hardware antigo, mas a resiliência arquitetural: a GPU de 2~GB resolveu sistemas pentadiagonais com precisão perfeita consumindo um volume 8 vezes maior que sua capacidade física, sustentada pela orquestração adaptativa do agendador.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparação empírica para o processamento da malha de 1,06 bilhão de pontos (1 varredura).}
+\label{tab:ooc_comparativo}
+\footnotesize
+\begin{tabular}{lcccc}
+\hline
+\textbf{Hardware} & \textbf{Memória Disponível} & \textbf{Regime} & \textbf{Tempo/Varredura} & \textbf{Gargalo Principal} \\
+\hline
+Cluster (EPYC + RTX 5000) & 32 GB VRAM + RAM livres & In-Core & $\sim$214 ms (0,21 s) & Banda GDDR6 \\
+Desktop Local (GTX 660)   & 2 GB VRAM + 32 GB Swap  & Out-of-Core & 90.869 ms (90,87 s) & I/O Swap (SSD) \\
+\hline
+\end{tabular}
+\end{table}
 
 \textbf{Limitações.} (i) A comparação GFLOPS com o NPB-GPU usa contagens de
 flops diferentes (28 vs. ~850 flops/ponto) e o NPB-GPU de referência compila
