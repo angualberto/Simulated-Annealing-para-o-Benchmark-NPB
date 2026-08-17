@@ -41,40 +41,11 @@ Simulated Annealing para o Benchmark NPB SP}
 \maketitle
 
 \begin{abstract}
-  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP)
-  is a memory- and latency-bound workload in which GPUs typically achieve
-  modest speedups. This work presents a hybrid CPU--GPU implementation of
-  the pentadiagonal sweep in which the fraction of lines assigned to each
-  processing unit is adjusted at runtime by a simulated annealing (SA)
-  heuristic that minimizes the measured time of each sweep window. The
-  implementation was validated for reproducibility by bit-identical
-  checksums across 1000 iterations, and executed with thermal monitoring
-  via NVML. On an NVIDIA RTX 5000 Ada, the hybrid solver solved
-  1.061,191,680,000 points (1.061 trillion) as 1,040,384,000 linear systems
-  of order 1020 in 213.9~s, at 163~ms per sweep and 182 GFLOPS (28
-  flops/point estimate), surpassing both the pure-GPU (185~ms) and pure-CPU
-  (611~ms) modes. The same adaptive scheme reached 4.86 million pentadiagonal
-  systems per second, in the same order as the NPB-GPU CUDA reference (200--216
-  GFLOPS, NAS official counting) on the same hardware.
+  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). Validated with bit-identical checksums, the SA dispatcher autonomously mitigated Out-of-Core SSD thrashing in large 3D meshes. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS), sustaining 4.86M systems/s. The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing 1-billion-point grids on single workstations.
 \end{abstract}
 
 \begin{resumo}
-  O solver pentadiagonal escalar do benchmark NAS Parallel Benchmark (NPB SP)
-  é uma carga de trabalho limitada por memória e latência, na qual GPUs
-  tipicamente atingem acelerações modestas. Este trabalho apresenta uma
-  implementação híbrida CPU--GPU da varredura pentadiagonal em que a fração
-  de linhas atribuída a cada unidade de processamento é ajustada em tempo de
-  execução por uma heurística de simulated annealing (SA) que minimiza o
-  tempo medido de cada janela de varredura. A implementação foi validada
-  quanto à reprodutibilidade por checksums bit-idênticos ao longo de 1000
-  iterações e executada com monitoramento térmico via NVML. Em uma NVIDIA
-  RTX 5000 Ada, o solver híbrido resolveu 1.061.191.680.000 pontos
-  (1,061 trilhão), correspondentes a 1.040.384.000 sistemas lineares de ordem
-  1020, em 213,9~s, a 163~ms por varredura e 182 GFLOPS (estimativa de 28
-  flops/ponto), superando tanto o modo somente-GPU (185~ms) quanto o
-  somente-CPU (611~ms). O mesmo esquema adaptativo atingiu 4,86 milhões de
-  sistemas pentadiagonais por segundo, na mesma ordem do NPB-GPU CUDA de
-  referência (200--216 GFLOPS, contagem oficial NAS) no mesmo hardware.
+  A varredura pentadiagonal escalar do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via Simulated Annealing (SA). Com verificação numérica bit-idêntica, o despachante mitigou autonomamente o \textit{thrashing} de SSD em regimes \textit{Out-of-Core} severos. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS), atingindo 4,86 milhões de sistemas/s. O regime híbrido superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando malhas de 1 bilhão de pontos em nós de trabalho singulares.
 \end{resumo}
 
 \section{Introdução}
