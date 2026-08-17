@@ -41,11 +41,11 @@ Simulated Annealing para o Benchmark NPB SP}
 \maketitle
 
 \begin{abstract}
-  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). The SA dispatcher autonomously mitigated Out-of-Core SSD thrashing on a legacy GTX 660 (2GB), reducing paging latency from 266~ms to 138~ms on a 16.8GB 3D mesh and completing the $Z$-sweep in 212~s. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS). The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing massive grids on single workstations.
+  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). Validated by bit-identical checksums (1000 iterations) and NVML thermal monitoring, the solver processed 1,061,191,680,000 points (1.04 billion systems of order 1020) in 213.9~s on an RTX 5000 Ada. At 163~ms/sweep and 182 GFLOPS, it surpassed pure-GPU (185~ms) and pure-CPU (611~ms) modes. It achieved 4.86M systems/s, comparable to the official NPB-GPU CUDA reference (200--216 GFLOPS).
 \end{abstract}
 
 \begin{resumo}
-  A varredura pentadiagonal do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU balanceado dinamicamente via Simulated Annealing (SA). O despachante mitigou o \textit{thrashing} de SSD em uma legada GTX 660 (2GB) sob regime \textit{Out-of-Core} (16,8GB), reduzindo a latência de paginação de 266~ms para 138~ms e concluindo a transposição $Z$ em 212~s. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS). O regime superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando simulações massivas em nós singulares.
+  A varredura pentadiagonal do benchmark NPB SP é limitada por memória. Apresentamos um solver híbrido CPU--GPU ajustado dinamicamente via \textit{simulated annealing} (SA). Validada por \textit{checksums} bit-idênticos (1000 iterações) e termometria NVML, a execução numa RTX 5000 Ada resolveu 1.061.191.680.000 pontos (1,04 bilhão de sistemas de ordem 1020) em 213,9~s (163~ms/varredura; 182 GFLOPS). O modelo superou os modos somente-GPU (185~ms) e somente-CPU (611~ms), alcançando 4,86 milhões de sistemas/s, desempenho na mesma ordem da referência NPB-GPU CUDA (200--216 GFLOPS).
 \end{resumo}
 
 \section{Introdução}
