@@ -41,11 +41,11 @@ Simulated Annealing para o Benchmark NPB SP}
 \maketitle
 
 \begin{abstract}
-  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). Validated with bit-identical checksums, the SA dispatcher autonomously mitigated Out-of-Core SSD thrashing on a legacy GTX 660 (2GB) processing a 16.8GB 3D mesh. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS). The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing 1-billion-point grids on single workstations.
+  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). The SA dispatcher autonomously mitigated Out-of-Core SSD thrashing on a legacy GTX 660 (2GB), reducing paging latency from 266~ms to 138~ms on a 16.8GB 3D mesh and completing the $Z$-sweep in 212~s. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS). The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing massive grids on single workstations.
 \end{abstract}
 
 \begin{resumo}
-  A varredura pentadiagonal escalar do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via Simulated Annealing (SA). Com verificação bit-idêntica, o despachante mitigou o \textit{thrashing} de SSD em uma legada GTX 660 (2GB) executando malha de 16,8GB \textit{Out-of-Core}. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS). O regime híbrido superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando malhas de 1 bilhão de pontos em nós singulares.
+  A varredura pentadiagonal do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU balanceado dinamicamente via Simulated Annealing (SA). O despachante mitigou o \textit{thrashing} de SSD em uma legada GTX 660 (2GB) sob regime \textit{Out-of-Core} (16,8GB), reduzindo a latência de paginação de 266~ms para 138~ms e concluindo a transposição $Z$ em 212~s. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS). O regime superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando simulações massivas em nós singulares.
 \end{resumo}
 
 \section{Introdução}
