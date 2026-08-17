@@ -41,11 +41,11 @@ Simulated Annealing para o Benchmark NPB SP}
 \maketitle
 
 \begin{abstract}
-  The pentadiagonal sweep of the NPB SP benchmark is memory-bound. We present a hybrid CPU--GPU solver with dynamic load balancing via simulated annealing (SA). On an RTX 5000 Ada, the solver processed 1.061 trillion points in 213.9~s (163~ms/sweep; 182 GFLOPS), outperforming pure-GPU (185~ms) and pure-CPU (611~ms) modes and reaching 4.86M systems/s. Under severe Out-of-Core conditions (legacy GTX 660 2~GB with SSD swap), the \textit{Edge Transpose} technique and SA filtering allowed solving the 1.06-billion-point mesh in 90.87~s ($X$), 91.98~s ($Y$), and 212.43~s ($Z$), preserving bit-identical checksums.
+  The pentadiagonal sweep of the NPB SP benchmark is memory-bound. We present a hybrid CPU--GPU solver with dynamic load balancing via simulated annealing (SA). On an RTX 5000 Ada, the solver processed 1.061 trillion points in 213.9~s (163~ms/sweep; 182 GFLOPS), outperforming pure-GPU (185~ms) and pure-CPU (611~ms) modes and reaching 4.86M systems/s. Under severe Out-of-Core conditions (legacy GTX 660 2~GB with SSD swap), the \textit{Edge Transpose} technique and SA filtering allowed solving the 1.06-trillion-point mesh in 90.87~s ($X$), 91.98~s ($Y$), and 212.43~s ($Z$), preserving bit-identical checksums.
 \end{abstract}
 
 \begin{resumo}
-  A varredura pentadiagonal do benchmark NPB SP é limitada por memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via \textit{Simulated Annealing} (SA). Na RTX 5000 Ada, o solver processou 1,061 trilhão de pontos em 213,9~s (163~ms/varredura; 182 GFLOPS), superando a GPU pura (185~ms) e a CPU pura (611~ms) atingindo 4,86 milhões de sistemas/s. Em ambiente \textit{Out-of-Core} legado (GTX 660 2~GB com swap SSD), a técnica \textit{Edge Transpose} e a filtragem SA resolveram a malha de 1,06 bilhão de pontos em 90,87~s ($X$), 91,98~s ($Y$) e 212,43~s ($Z$), preservando o \textit{checksum} invariante.
+  A varredura pentadiagonal do benchmark NPB SP é limitada por memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via \textit{Simulated Annealing} (SA). Na RTX 5000 Ada, o solver processou 1,061 trilhão de pontos em 213,9~s (163~ms/varredura; 182 GFLOPS), superando a GPU pura (185~ms) e a CPU pura (611~ms) atingindo 4,86 milhões de sistemas/s. Em ambiente \textit{Out-of-Core} legado (GTX 660 2~GB com swap SSD), a técnica \textit{Edge Transpose} e a filtragem SA resolveram a malha de 1,06 trilhão de pontos em 90,87~s ($X$), 91,98~s ($Y$) e 212,43~s ($Z$), preservando o \textit{checksum} invariante.
 \end{resumo}
 
 \section{Introdução}
