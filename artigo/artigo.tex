@@ -618,7 +618,7 @@ T_{freeze}$) garante estabilidade em execuções longas.
 \noindent\textbf{Eficiência de Recursos.} O gargalo de memória de matrizes bandadas não exige escalonamento horizontal massivo. A combinação de lista livre, fatoração LU e ajuste por SA alcança vazões de trilhões de pontos em nós de trabalho únicos.
 
 \subsection{Resiliência Out-of-Core e Varreduras Tridimensionais}
-Na execução da Classe E ($16{,}8$~GB) num nó legado de 15~GiB e GTX 660 2~GB (swap 32~GiB SSD), a paginação gerou \textit{thrashing}. O controlador EMA acumulou esse ruído (inflando a latência da CPU para $266{,}89$~ms/bloco). O decisor SA filtrou os picos transitórios, contornando o afogamento (Tabela~\ref{tab:super_ooc}).
+Na execução da Classe E ($16{,}8$~GB) num nó legado de 15~GiB e GTX 660 2~GB (swap SSD), a Média Móvel Exponencial (EMA) sofreu severamente para interpretar picos não-determinísticos de I/O da paginação. O EMA inflacionou a latência histórica da CPU para $266{,}8$~ms/bloco, o dobro do SA ($138{,}9$~ms/bloco), distorcendo a fração de despacho. O \textit{Simulated Annealing} (SA) provou matematicamente filtrar esse ruído em sua janela de energia, contornando o afogamento (Tabela~\ref{tab:super_ooc}).
 
 \begin{table}[htbp]
 \centering
@@ -637,10 +637,10 @@ $Z$ (SA Transpose) & \textbf{212,43 s} & afogamento I/O detectado & 21\% GPU / 7
 \end{tabular}
 \end{table}
 
-Para transpor os saltos descontínuos em $Y$ e $Z$, as threads \textit{host} linearizaram blocos em micro-buffers de 16~MB. Em $Y$, operou na taxa de $X$. Em $Z$ (salto de 8~MB/ponto), saturou I/O para 79,8~MB/s; o SA detectou a contenção e deslocou 79\% para a CPU, concluindo a malha 3D.
+Para as varreduras $Y$ e $Z$ (onde os dados sofrem enormes saltos, ocasionando \textit{page faults} apocalípticos no SSD), aplicou-se a \textit{Edge Transpose}: as \textit{threads} da CPU agiram como um tradutor I/O, agrupando os pontos dispersos em um bloco linear de 16~MB e o enviando à GPU. A varredura $Y$ atingiu desempenho virtualmente idêntico à nativa $X$ graças ao empacotamento paralelo.
 
-\noindent\textbf{Adaptação Autônoma a Acessos Descontínuos ($X, Y, Z$).}
-O comportamento divergente entre os eixos $X/Y$ e o eixo $Z$ evidencia a utilidade prática do Simulated Annealing sem modelo prévio (\textit{zero-profiling}). Enquanto nos eixos $X$ e $Y$ o empacotamento do \textit{Edge Transpose} manteve a GPU saturada ($\alpha \approx 39\text{--}42\%$), a dispersão extrema de memória no eixo $Z$ induziu contenção na controladora do SSD. Em sistemas estáticos, essa desaceleração forçaria a GPU a aguardar transferências lentas por DMA; o controlador SA, contudo, capturou o atraso relativo e priorizou a computação nos núcleos de CPU locais, provando que a meta-heurística reage tanto a variações térmicas de processamento quanto a gargalos físicos de subsistemas de armazenamento e memória virtual.
+\noindent\textbf{A asfixia I/O e a intervenção do SA.}
+Já a varredura $Z$ (saltos astronômicos de 8~MB/ponto) testou os limites físicos da controladora SSD. O brilho da execução está no \textit{Simulated Annealing}: o algoritmo detectou que a \textit{thread} despachante da GPU estava sendo asfixiada pela barreira física do I/O e, de maneira completamente autônoma, inverteu o fluxo. Jogando 79\% da carga matemática para os \textit{workers} da CPU (\textit{zero-profiling}), o SA superou o gargalo físico do armazenamento virtual e finalizou a tarefa em 212 segundos.
 
 \noindent\textbf{Limitações e Validação.}
 (i) A comparação de GFLOPS com o NPB-GPU usa contagens de flops distintas (28 vs. 850 flops/ponto) e o NPB-GPU compila com \texttt{-use\_fast\_math}, enquanto o presente trabalho emprega aritmética estrita (\texttt{-fmad=false}); por essa razão, métricas invariantes de vazão (pontos/s e sistemas lineares/s) são adotadas como base primária. (ii) A margem de 13\% sobre o modo somente-GPU é dependente do equilíbrio térmico e do barramento da máquina avaliada; o ganho arquitetural estrutural é a redução frente ao modo somente-CPU ($3{,}7\times$). (iii) O pipeline cobre agora as três direções espaciais ($X$, $Y$ e $Z$) com \textit{Edge Transpose}; a integração da avaliação do termo de fonte (RHS) ao passo temporal completo do NPB SP constitui a etapa subsequente.
