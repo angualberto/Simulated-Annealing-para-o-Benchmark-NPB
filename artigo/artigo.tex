@@ -41,11 +41,11 @@ Simulated Annealing para o Benchmark NPB SP}
 \maketitle
 
 \begin{abstract}
-  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). Validated with bit-identical checksums, the SA dispatcher autonomously mitigated Out-of-Core SSD thrashing in large 3D meshes. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS), sustaining 4.86M systems/s. The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing 1-billion-point grids on single workstations.
+  The scalar pentadiagonal solver of the NAS Parallel Benchmark (NPB SP) is a memory-bound workload. We present a hybrid CPU--GPU solver with runtime load balancing via simulated annealing (SA). Validated with bit-identical checksums, the SA dispatcher autonomously mitigated Out-of-Core SSD thrashing on a legacy GTX 660 (2GB) processing a 16.8GB 3D mesh. On an RTX 5000 Ada, it solved 1.06 trillion points in 213.9~s (182 GFLOPS). The hybrid mode outperformed pure-GPU by 13\% and pure-CPU by 3.7$\times$, democratizing 1-billion-point grids on single workstations.
 \end{abstract}
 
 \begin{resumo}
-  A varredura pentadiagonal escalar do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via Simulated Annealing (SA). Com verificação numérica bit-idêntica, o despachante mitigou autonomamente o \textit{thrashing} de SSD em regimes \textit{Out-of-Core} severos. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS), atingindo 4,86 milhões de sistemas/s. O regime híbrido superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando malhas de 1 bilhão de pontos em nós de trabalho singulares.
+  A varredura pentadiagonal escalar do benchmark NPB SP impõe severos gargalos de memória. Apresentamos um solver híbrido CPU--GPU com balanceamento dinâmico via Simulated Annealing (SA). Com verificação bit-idêntica, o despachante mitigou o \textit{thrashing} de SSD em uma legada GTX 660 (2GB) executando malha de 16,8GB \textit{Out-of-Core}. Em uma RTX 5000 Ada, resolveu 1,06 trilhão de pontos em 213,9~s (182 GFLOPS). O regime híbrido superou o modo somente-GPU em 13\% e somente-CPU em 3,7$\times$, viabilizando malhas de 1 bilhão de pontos em nós singulares.
 \end{resumo}
 
 \section{Introdução}
